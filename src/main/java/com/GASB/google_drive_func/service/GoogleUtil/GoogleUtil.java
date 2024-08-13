@@ -65,31 +65,21 @@ public class GoogleUtil {
     }
 
     protected Credential getCredentials(int workspace_id) throws Exception {
-        WorkspaceConfig workspaceConfig = workspaceConfigRepo.findById(workspace_id).orElse(null);
-        if (workspaceConfig == null) { // 수정: 잘못된 workspace ID 처리
-            throw new IllegalArgumentException("Invalid workspace ID");
-        }
+//        WorkspaceConfig workspaceConfig = workspaceConfigRepo.findById(workspace_id).orElse(null);
+//        if (workspaceConfig == null) {
+//            throw new IllegalArgumentException("Invalid workspace ID");
+//        }
 
-        Credential credential = googleAuthorizationCodeFlow.loadCredential("user");
-        String accessToken = workspaceConfig.getToken();
+        // 기존의 자격 증명을 무시하고 항상 새로 발급받도록 함
+        NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8088).setCallbackPath("/login/oauth2/code/google").build();
 
-        if (credential == null || credential.getAccessToken() == null || credential.getExpiresInSeconds() <= 60) {
-            if (credential != null && credential.getRefreshToken() != null) {
-                log.info("Refreshing access token using refresh token.");
-                return refreshAccessToken(credential, workspace_id); // 수정: 갱신된 토큰을 DB에 저장
-            } else {
-                log.info("No valid access or refresh token found, starting new authorization flow.");
-                NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-                LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8088).setCallbackPath("/login/oauth2/code/google").build();
-                credential = new AuthorizationCodeInstalledApp(googleAuthorizationCodeFlow, receiver).authorize("user");
-                // 수정: 새로 발급된 자격 증명을 DB에 저장
-                workspaceConfigRepo.updateToken(workspace_id, credential.getAccessToken());
-            }
-        } else {
-            credential.setAccessToken(accessToken); // 기존의 액세스 토큰을 설정
-        }
-        return credential;
+        // 새로 발급된 자격 증명을 DB에 저장
+//        workspaceConfigRepo.updateToken(workspace_id, credential.getAccessToken());
+
+        return new AuthorizationCodeInstalledApp(googleAuthorizationCodeFlow, receiver).authorize("user");
     }
+
 
     public Drive getDriveService(int workspace_id) throws Exception {
         try {
