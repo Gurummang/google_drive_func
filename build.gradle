@@ -59,6 +59,11 @@ dependencies {
 	implementation 'org.springframework.security:spring-security-oauth2-client'
 	implementation 'org.springframework.security:spring-security-oauth2-jose'
 	testImplementation 'org.springframework.security:spring-security-test'
+
+	//Apache Tika
+	implementation 'org.apache.tika:tika-core:2.9.2'
+	implementation 'org.apache.tika:tika-parsers-standard-package:2.9.2'
+
 }
 
 tasks.named('test') {
