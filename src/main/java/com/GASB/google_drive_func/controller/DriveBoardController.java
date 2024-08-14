@@ -1,5 +1,6 @@
 package com.GASB.google_drive_func.controller;
 
+import com.GASB.google_drive_func.annotation.JWT.ValidateJWT;
 import com.GASB.google_drive_func.controller.RequestBody.DriveBody;
 import com.GASB.google_drive_func.model.dto.TopUserDTO;
 import com.GASB.google_drive_func.model.dto.file.DriveFileCountDto;
@@ -17,9 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
@@ -37,72 +36,107 @@ public class DriveBoardController {
         this.adminRepo = adminRepo;
     }
 
-    @PostMapping("/files/size")
-    public ResponseEntity<DirveFileSizeDto> fetchFileSize(@RequestBody DriveBody requestBody){
-        try{
-//            String email = (String) servletRequest.getAttribute("email");
-            String email = requestBody.getEmail();
+    @GetMapping("/files/size")
+    @ValidateJWT
+    public ResponseEntity<Map<String,?>> fetchFileSize(HttpServletRequest servletRequest) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (servletRequest.getAttribute("error") != null) {
+                String errorMessage = (String) servletRequest.getAttribute("error");
+                response.put("status", 401);
+                response.put("error_message", errorMessage);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+            String email = (String) servletRequest.getAttribute("email");
             int orgId = adminRepo.findByEmail(email).get().getOrg().getId();
-            DirveFileSizeDto slackFileSizeDto = driveFileSerivce.sumOfFileSize(orgId,6);
-            return ResponseEntity.ok(slackFileSizeDto);
+            DirveFileSizeDto slackFileSizeDto = driveFileSerivce.sumOfFileSize(orgId, 6);
+
+            // 응답에 status 추가
+            response.put("status", 200);
+            response.put("data", slackFileSizeDto);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            // log.error("Error fetching file size", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new DirveFileSizeDto(0,0,0));
+            response.put("status", 500);
+            response.put("data", new DirveFileSizeDto(0, 0, 0));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
-    @PostMapping("/files/count")
-    public ResponseEntity<DriveFileCountDto> fetchFileCount(@RequestBody DriveBody requestBody){
-        try{
-//            String email = (String) servletRequest.getAttribute("email");
-            // log.info("httpServletRequest: {}", servletRequest);
-            String email = requestBody.getEmail();
+
+
+    @GetMapping("/files/count")
+    @ValidateJWT
+    public ResponseEntity<Map<String, ?>> fetchFileCount(HttpServletRequest servletRequest) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (servletRequest.getAttribute("error") != null) {
+                String errorMessage = (String) servletRequest.getAttribute("error");
+                response.put("status", 401);
+                response.put("error_message", errorMessage);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+            String email = (String) servletRequest.getAttribute("email");
             int orgId = adminRepo.findByEmail(email).get().getOrg().getId();
-            DriveFileCountDto slackFileCountDto = driveFileSerivce.FileCountSum(orgId,6);
-            return ResponseEntity.ok(slackFileCountDto);
+            DriveFileCountDto slackFileCountDto = driveFileSerivce.FileCountSum(orgId, 6);
+            response.put("status", 200);
+            response.put("data", slackFileCountDto);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            // log.error("Error fetching file count", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new DriveFileCountDto(0,0,0,0));
+            response.put("status", 500);
+            response.put("data", new DriveFileCountDto(0, 0, 0, 0));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-    @PostMapping("/files/recent")
-    public ResponseEntity<List<DriveRecentFileDTO>> fetchRecentFiles(@RequestBody DriveBody requestBody) {
+
+    @GetMapping("/files/recent")
+    @ValidateJWT
+    public ResponseEntity<Map<String, ?>> fetchRecentFiles(HttpServletRequest servletRequest) {
+        Map<String, Object> response = new HashMap<>();
         try {
-//            String email = (String) servletRequest.getAttribute("email");
-            String email = requestBody.getEmail();
+            if (servletRequest.getAttribute("error") != null) {
+                String errorMessage = (String) servletRequest.getAttribute("error");
+                response.put("status", 401);
+                response.put("error_message", errorMessage);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+            String email = (String) servletRequest.getAttribute("email");
             int orgId = adminRepo.findByEmail(email).get().getOrg().getId();
             Saas saasObject = saasRepo.findById(6).orElse(null);
             List<DriveRecentFileDTO> recentFiles = driveFileSerivce.DriveRecentFiles(orgId, Objects.requireNonNull(saasObject).getId().intValue());
-            return ResponseEntity.ok(recentFiles);
+            response.put("status", 200);
+            response.put("data", recentFiles);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            // log.error("Error fetching recent files", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonList(new DriveRecentFileDTO("Error", "Server Error", "N/A", LocalDateTime.now())));
+            response.put("status", 500);
+            response.put("data", Collections.singletonList(new DriveRecentFileDTO("Error", "Server Error", "N/A", LocalDateTime.now())));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
-    @PostMapping("/user-ranking")
-    public ResponseEntity<List<TopUserDTO>> fetchUserRanking(@RequestBody DriveBody requestBody) {
+    @GetMapping("/user-ranking")
+    @ValidateJWT
+    public ResponseEntity<Map<String, ?>> fetchUserRanking(HttpServletRequest servletRequest) {
+        Map<String, Object> response = new HashMap<>();
         try {
-//            String email = (String) servletRequest.getAttribute("email");
-            String email = requestBody.getEmail();
+            if (servletRequest.getAttribute("error") != null) {
+                String errorMessage = (String) servletRequest.getAttribute("error");
+                response.put("status", 401);
+                response.put("error_message", errorMessage);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+            String email = (String) servletRequest.getAttribute("email");
             int orgId = adminRepo.findByEmail(email).get().getOrg().getId();
-//            Saas saasObject = saasRepo.findBySaasName("GoogleDrive").orElse(null);
             Saas saasObject = saasRepo.findById(6).orElse(null);
             CompletableFuture<List<TopUserDTO>> future = driveFileSerivce.getTopUsersAsync(orgId, Objects.requireNonNull(saasObject).getId().intValue());
             List<TopUserDTO> topuser = future.get();
-
-            return ResponseEntity.ok(topuser);
-        } catch (RuntimeException e){
-            // log.error("Error fetching recent files", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonList(new TopUserDTO("Error", 0L, 0L, LocalDateTime.now())));
+            response.put("status", 200);
+            response.put("data", topuser);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            // log.error("Error fetching recent files", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonList(new TopUserDTO("Error", 0L, 0L, LocalDateTime.now())));
+            response.put("status", 500);
+            response.put("data", Collections.singletonList(new TopUserDTO("Error", 0L, 0L, LocalDateTime.now())));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 }
