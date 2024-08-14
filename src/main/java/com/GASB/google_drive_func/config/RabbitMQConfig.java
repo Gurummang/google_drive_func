@@ -30,6 +30,21 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.GROUPING_ROUTING_KEY}")
     private String groupingRoutingKey;
 
+
+    @Value("${rabbitmq.init.queue}")
+    private String initQueueName;
+
+    @Value("${rabbitmq.init.routingkey}")
+    private String initRoutingKey;
+
+    @Bean
+    Queue myQueue() {
+        return new Queue(initQueueName, true);
+    }
+    @Bean
+    Binding initQueueBinding(Queue myQueue, DirectExchange exchange) {
+        return BindingBuilder.bind(myQueue).to(exchange).with(initRoutingKey);
+    }
     // 첫 번째 큐 설정
     @Bean
     Queue fileQueue() {
@@ -74,6 +89,14 @@ public class RabbitMQConfig {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setExchange(exchangeName);
         rabbitTemplate.setRoutingKey(groupingRoutingKey);
+        return rabbitTemplate;
+    }
+
+    @Bean
+    public RabbitTemplate initRabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+        rabbitTemplate.setExchange(exchangeName);
+        rabbitTemplate.setRoutingKey(initRoutingKey);
         return rabbitTemplate;
     }
 }
