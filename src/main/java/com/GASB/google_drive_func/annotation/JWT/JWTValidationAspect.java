@@ -31,7 +31,7 @@ public class JWTValidationAspect {
     @Value("${auth.server.url}")
     private String authServerUrl;
 
-    @Before("@annotation(com.GASB.slack_func.annotation.JWT.ValidateJWT)")
+    @Before("@annotation(com.GASB.google_drive_func.annotation.JWT.ValidateJWT)")
     public void validateJWT() {
         Cookie[] cookies = servletRequest.getCookies();
         String jwtToken = null;
