@@ -45,6 +45,7 @@ public enum MimeType {
 
     // Compressed files
     ZIP("zip", "application/zip"),
+    ZIP2("zip", "application/x-zip-compressed"),
     RAR("rar", "application/vnd.rar"),
     TAR("tar", "application/x-tar"),
     GZ("gz", "application/gzip"),
