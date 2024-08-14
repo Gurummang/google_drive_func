@@ -51,7 +51,6 @@ public class DriveInitController {
             Saas google_drive_saas_obj = SaasRepo.findById(6).orElse(null);
 
             List<CompletableFuture<Void>> futures = new ArrayList<>();
-            driveFileSerivce.fetchAndStoreFiles(1, "file_upload");
             futures.add(driveFileSerivce.fetchAndStoreFiles(1, "file_upload"));
 
             // 모든 비동기 작업이 완료될 때까지 기다림

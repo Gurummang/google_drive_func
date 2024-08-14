@@ -36,14 +36,15 @@ public class GoogleUtil {
         this.workspaceConfigRepo = workspaceConfigRepo;
     }
 
-    private String selectToken(int workspace_id) {
+    private Credential selectToken(int workspace_id) {
         try {
             // workspace_id를 통해 해당 workspace의 token을 가져옴
             WorkspaceConfig workspaceConfig = workspaceConfigRepo.findById(workspace_id).orElse(null);
             if (workspaceConfig == null) { // 수정: 잘못된 workspace ID 처리
                 throw new IllegalArgumentException("Invalid workspace ID");
             }
-            return workspaceConfig.getToken(); // 토큰을 반환
+            return new Credential(BearerToken.authorizationHeaderAccessMethod())
+                    .setAccessToken(workspaceConfig.getToken()); // 토큰을 반환
         } catch (Exception e) {
             log.error("An error occurred while selecting the token: {}", e.getMessage(), e);
             return null;
@@ -64,15 +65,12 @@ public class GoogleUtil {
         return credential;
     }
 
-    protected Credential getCredentials(int workspace_id) throws Exception {
-//        WorkspaceConfig workspaceConfig = workspaceConfigRepo.findById(workspace_id).orElse(null);
-//        if (workspaceConfig == null) {
-//            throw new IllegalArgumentException("Invalid workspace ID");
-//        }
+    protected Credential getCredentials() throws Exception {
 
         // 기존의 자격 증명을 무시하고 항상 새로 발급받도록 함
         NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8088).setCallbackPath("/login/oauth2/code/google").build();
+
 
         // 새로 발급된 자격 증명을 DB에 저장
 //        workspaceConfigRepo.updateToken(workspace_id, credential.getAccessToken());
@@ -83,7 +81,12 @@ public class GoogleUtil {
 
     public Drive getDriveService(int workspace_id) throws Exception {
         try {
-            return new Drive.Builder(GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, getCredentials(workspace_id))
+            String accessToken = getCredentials().getAccessToken();
+            log.info("Access token: {}", accessToken);
+
+//            Credential credential = selectToken(workspace_id);
+
+            return new Drive.Builder(GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, getCredentials())
                     .setApplicationName(APPLICATION_NAME)
                     .build();
         } catch (Exception e) {
