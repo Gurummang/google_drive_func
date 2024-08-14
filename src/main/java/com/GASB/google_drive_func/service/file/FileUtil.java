@@ -2,7 +2,7 @@ package com.GASB.google_drive_func.service.file;
 
 import com.GASB.google_drive_func.model.entity.*;
 import com.GASB.google_drive_func.model.mapper.DriveFileMapper;
-import com.GASB.google_drive_func.model.repository.MonitoredUserRepo;
+import com.GASB.google_drive_func.model.repository.user.MonitoredUserRepo;
 import com.GASB.google_drive_func.model.repository.files.FileActivityRepo;
 import com.GASB.google_drive_func.model.repository.files.FileUploadRepository;
 import com.GASB.google_drive_func.model.repository.files.StoredFileRepository;
@@ -44,6 +44,7 @@ public class FileUtil {
     private final FileUploadRepository fileUploadRepository;
     private final FileActivityRepo activitiesRepository;
     private final S3Client s3Client;
+    private final ScanUtil scanUtil;
 
     private static final Path BASE_PATH = Paths.get("downloads");
 
@@ -183,11 +184,16 @@ public class FileUtil {
         String saasname = orgSaaSObject.getSaas().getSaasName();
         String OrgName = orgSaaSObject.getOrg().getOrgName();
         String savedPath = getFullPath(file, saasname, OrgName, hash, workspaceName, service);
+        String filePath = BASE_PATH.resolve(file.getName()).toString();
+
 
         MonitoredUsers user = MonitoredUsersRepo.fineByUserId(file.getLastModifyingUser().getPermissionId()).orElse(null);
+        StoredFile storedFileObj = driveFileMapper.toStoredFileEntity(file, hash, savedPath);
+        FileUploadTable fileUploadTableObj = driveFileMapper.toFileUploadEntity(file, orgSaaSObject, hash);
+        Activities activities = driveFileMapper.toActivityEntity(file, event_type, user, savedPath);
         synchronized (this) {
             try {
-                StoredFile storedFileObj = driveFileMapper.toStoredFileEntity(file, hash, savedPath);
+
                 if (!storedFilesRepository.existsBySaltedHash(storedFileObj.getSaltedHash())) {
                     storedFilesRepository.save(storedFileObj);
                     log.info("File uploaded successfully: {}", file.getName());
@@ -195,15 +201,13 @@ public class FileUtil {
                     log.warn("Duplicate file detected in StoredFile: {}", file.getName());
                 }
 
-                FileUploadTable fileUploadTableObj = driveFileMapper.toFileUploadEntity(file, orgSaaSObject, hash);
+
                 if (!fileUploadRepository.existsBySaasFileIdAndTimestamp(fileUploadTableObj.getSaasFileId(), fileUploadTableObj.getTimestamp())) {
                     fileUploadRepository.save(fileUploadTableObj);
                     log.info("File uploaded successfully: {}", file.getName());
                 } else {
                     log.warn("Duplicate file detected in FileUploadTable: {}", file.getName());
                 }
-
-                Activities activities = driveFileMapper.toActivityEntity(file, event_type, user, savedPath);
                 if (!activitiesRepository.existsBySaasFileIdAndEventTs(activities.getSaasFileId(), activities.getEventTs())) {
                     activitiesRepository.save(activities);
                     log.info("Activity logged successfully: {}", file.getName());
@@ -214,7 +218,8 @@ public class FileUtil {
                 log.error("Error while converting and saving entities: {}", e.getMessage(), e);
             }
         }
-        uploadFileToS3(BASE_PATH.resolve(file.getName()).toString(), savedPath);
+        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
+        uploadFileToS3(filePath, savedPath);
         return null;
     }
 

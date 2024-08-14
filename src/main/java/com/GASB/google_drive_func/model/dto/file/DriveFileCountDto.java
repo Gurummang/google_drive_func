@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class SlackFileCountDto {
+public class DriveFileCountDto {
     private int totalFiles;
     private int sensitiveFiles;
     private int maliciousFiles;
