@@ -7,7 +7,7 @@ import com.GASB.google_drive_func.model.repository.files.FileActivityRepo;
 import com.GASB.google_drive_func.model.repository.files.FileUploadRepository;
 import com.GASB.google_drive_func.model.repository.files.StoredFileRepository;
 import com.GASB.google_drive_func.model.repository.org.WorkspaceConfigRepo;
-import com.GASB.google_drive_func.service.MessageSender;
+import com.GASB.google_drive_func.service.MessageMannager;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 import jakarta.transaction.Transactional;
@@ -46,7 +46,7 @@ public class FileUtil {
     private final FileActivityRepo activitiesRepository;
     private final S3Client s3Client;
     private final ScanUtil scanUtil;
-    private final MessageSender messageSender;
+    private final MessageMannager messageMannager;
 
     private static final Path BASE_PATH = Paths.get("downloads");
 
@@ -198,7 +198,8 @@ public class FileUtil {
 
                 if (!storedFilesRepository.existsBySaltedHash(storedFileObj.getSaltedHash())) {
                     storedFilesRepository.save(storedFileObj);
-                    messageSender.sendMessage(storedFileObj.getId());
+                    messageMannager.sendMessage(storedFileObj.getId());
+                    messageMannager.sendGroupingMessage(activities.getId());
                     log.info("File uploaded successfully: {}", file.getName());
                 } else {
                     log.warn("Duplicate file detected in StoredFile: {}", file.getName());
