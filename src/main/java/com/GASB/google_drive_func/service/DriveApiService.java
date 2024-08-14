@@ -1,11 +1,10 @@
 package com.GASB.google_drive_func.service;
 
-import com.GASB.google_drive_func.controller.RequestBody.DriveId;
 import com.GASB.google_drive_func.model.entity.MonitoredUsers;
 import com.GASB.google_drive_func.model.entity.OrgSaaS;
 import com.GASB.google_drive_func.model.mapper.DriveFileMapper;
 import com.GASB.google_drive_func.model.mapper.DriveUserMapper;
-import com.GASB.google_drive_func.model.repository.MonitoredUserRepo;
+import com.GASB.google_drive_func.model.repository.user.MonitoredUserRepo;
 import com.GASB.google_drive_func.model.repository.org.OrgSaaSRepo;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
 import com.GASB.google_drive_func.service.file.FileUtil;

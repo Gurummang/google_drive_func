@@ -19,7 +19,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
 
-                                .requestMatchers("/oauth2/**", "/login**", "/error**","/api/v1/connect/google-drive/**").permitAll()
+                                .requestMatchers("/oauth2/**", "/login**", "/error**","/api/v1/connect/google-drive/**","/api/v1/board/google-drive/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2Login ->

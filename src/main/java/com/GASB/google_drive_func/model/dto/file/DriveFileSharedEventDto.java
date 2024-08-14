@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SlackFileSharedEventDto {
+public class DriveFileSharedEventDto {
     private String from;
     private String event;
     private String saas;
