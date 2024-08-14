@@ -1,5 +1,6 @@
 package com.GASB.google_drive_func.config;
 
+import org.apache.tika.Tika;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,5 +33,10 @@ public class BasicCnfig {
                 .region(Region.of(region))
                 .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
                 .build();
+    }
+
+    @Bean
+    public Tika tika(){
+        return new Tika();
     }
 }
