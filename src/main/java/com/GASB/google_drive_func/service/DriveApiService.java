@@ -7,7 +7,6 @@ import com.GASB.google_drive_func.model.mapper.DriveUserMapper;
 import com.GASB.google_drive_func.model.repository.user.MonitoredUserRepo;
 import com.GASB.google_drive_func.model.repository.org.OrgSaaSRepo;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
-import com.GASB.google_drive_func.service.file.FileUtil;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.Permission;
@@ -24,17 +23,14 @@ import java.util.Objects;
 public class DriveApiService {
 
     private final GoogleUtil googleUtil;
-    private final FileUtil fileUtil;
     private final OrgSaaSRepo OrgSaaSRepo;
     private final MonitoredUserRepo monitoredUserRepo;
     private final DriveUserMapper DriveUserMapper;
-    private final DriveFileMapper DriveFileMapper;
     @Autowired
-    public DriveApiService(GoogleUtil googleUtil, FileUtil fileUtil, OrgSaaSRepo OrgSaaSRepo, MonitoredUserRepo MonitoredUsersRepo, DriveUserMapper DriveUserMapper, DriveFileMapper driveFileMapper) {
+    public DriveApiService(GoogleUtil googleUtil, OrgSaaSRepo OrgSaaSRepo
+            , MonitoredUserRepo MonitoredUsersRepo, DriveUserMapper DriveUserMapper) {
         this.googleUtil = googleUtil;
-        this.fileUtil = fileUtil;
         this.OrgSaaSRepo = OrgSaaSRepo;
-        this.DriveFileMapper = driveFileMapper;
         this.monitoredUserRepo = MonitoredUsersRepo;
         this.DriveUserMapper = DriveUserMapper;
     }
@@ -57,41 +53,18 @@ public class DriveApiService {
         }
     }
 
-    // 공유 드라이브에서 파일을 다운로드하고 저장
-//    @Async("threadPoolTaskExecutor")
-//    public CompletableFuture<Void> fetchFileAsync(int workspace_id, String sharedDriveId) {
-//        return CompletableFuture.runAsync(() -> {
-//            try {
-//                Drive service = googleUtil.getDriveService(workspace_id);
-//                OrgSaaS orgSaaSObject = OrgSaaSRepo.findById(workspace_id).orElse(null);
-//                Path basePath = Paths.get("downloaded_files");
-//                FileList result = service.files().list()
-//                        .setDriveId(sharedDriveId)
-//                        .setIncludeItemsFromAllDrives(true)
-//                        .setSupportsAllDrives(true)
-//                        .setCorpora("drive")
-//                        .setQ("trashed = false")
-//                        .setFields("files(id, name, mimeType, parents, size, owners(displayName, emailAddress))")
-//                        .execute();
-//
-//                log.info("Files found in shared drive {}: {}", sharedDriveId, result.getFiles().size());
-//                if (result.getFiles() != null && !result.getFiles().isEmpty()) {
-//                    result.getFiles().forEach(file -> {
-//                        log.info("File ID: {}, Name: {}", file.getId(), file.getName());
-//                        String savedPath = fileUtil.getFullPath(file, service);
-//                        fileUtil.DownloadFileMethod(file.getId(), basePath.resolve(file.getName()).toString(), service);
-//                        MonitoredUsers user = MonitoredUsersRepo.findByEmail(file.getOwners().get(0).getEmailAddress()).orElse(null);
-//                        DriveFileMapper.EntireEntityConverter(file, null, user, savedPath, fileUtil.calculateHash(file), savedPath, orgSaaSObject);
-//                    });
-//                } else {
-//                    log.info("No files found in the shared drive.");
-//                }
-//            } catch (Exception e) {
-//                log.error("An error occurred while listing files: {}", e.getMessage(), e);
-//            }
-//        });
-//    }
-
+    public PermissionList fetchUser(Drive service, String DriveId) {
+        try {
+            return service.permissions().list(DriveId)
+                    .setSupportsAllDrives(true)
+                    .setUseDomainAdminAccess(true)
+                    .setFields("permissions(id,emailAddress,displayName,role)")
+                    .execute();
+        } catch (Exception e){
+            log.error("An error occurred while listing users: {}", e.getMessage(), e);
+            return null;
+        }
+    }
 
     // 공유 드라이브에서 사용자의 권한 리스트를 가져옴
     public void fetchUserList(int workspace_id, String sharedDriveId) {

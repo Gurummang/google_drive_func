@@ -1,7 +1,6 @@
 package com.GASB.google_drive_func.controller;
 
 import com.GASB.google_drive_func.annotation.JWT.ValidateJWT;
-import com.GASB.google_drive_func.controller.RequestBody.DriveBody;
 import com.GASB.google_drive_func.model.dto.TopUserDTO;
 import com.GASB.google_drive_func.model.dto.file.DriveFileCountDto;
 import com.GASB.google_drive_func.model.dto.file.DirveFileSizeDto;
@@ -9,7 +8,8 @@ import com.GASB.google_drive_func.model.dto.file.DriveRecentFileDTO;
 import com.GASB.google_drive_func.model.entity.Saas;
 import com.GASB.google_drive_func.model.repository.org.AdminRepo;
 import com.GASB.google_drive_func.model.repository.org.SaasRepo;
-import com.GASB.google_drive_func.service.file.DriveFileSerivce;
+import com.GASB.google_drive_func.service.file.DriveFileService;
+import com.GASB.google_drive_func.service.file.FileUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,13 +25,13 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 @RequestMapping("/api/v1/board/google-drive")
 public class DriveBoardController {
-    private final DriveFileSerivce driveFileSerivce;
+    private final FileUtil fileUtil;
     private final SaasRepo saasRepo;
     private final AdminRepo adminRepo;
 
     @Autowired
-    public DriveBoardController(DriveFileSerivce driveFileSerivce, SaasRepo saasRepo, AdminRepo adminRepo) {
-        this.driveFileSerivce = driveFileSerivce;
+    public DriveBoardController(FileUtil fileUtil, SaasRepo saasRepo, AdminRepo adminRepo) {
+        this.fileUtil = fileUtil;
         this.saasRepo = saasRepo;
         this.adminRepo = adminRepo;
     }
@@ -49,7 +49,7 @@ public class DriveBoardController {
             }
             String email = (String) servletRequest.getAttribute("email");
             int orgId = adminRepo.findByEmail(email).get().getOrg().getId();
-            DirveFileSizeDto slackFileSizeDto = driveFileSerivce.sumOfFileSize(orgId, 6);
+            DirveFileSizeDto slackFileSizeDto = fileUtil.sumOfFileSize(orgId, 6);
 
             // 응답에 status 추가
             response.put("status", 200);
@@ -78,7 +78,7 @@ public class DriveBoardController {
             }
             String email = (String) servletRequest.getAttribute("email");
             int orgId = adminRepo.findByEmail(email).get().getOrg().getId();
-            DriveFileCountDto slackFileCountDto = driveFileSerivce.FileCountSum(orgId, 6);
+            DriveFileCountDto slackFileCountDto = fileUtil.FileCountSum(orgId, 6);
             response.put("status", 200);
             response.put("data", slackFileCountDto);
             return ResponseEntity.ok(response);
@@ -103,7 +103,7 @@ public class DriveBoardController {
             String email = (String) servletRequest.getAttribute("email");
             int orgId = adminRepo.findByEmail(email).get().getOrg().getId();
             Saas saasObject = saasRepo.findById(6).orElse(null);
-            List<DriveRecentFileDTO> recentFiles = driveFileSerivce.DriveRecentFiles(orgId, Objects.requireNonNull(saasObject).getId().intValue());
+            List<DriveRecentFileDTO> recentFiles = fileUtil.DriveRecentFiles(orgId, Objects.requireNonNull(saasObject).getId().intValue());
             response.put("status", 200);
             response.put("data", recentFiles);
             return ResponseEntity.ok(response);
@@ -128,7 +128,7 @@ public class DriveBoardController {
             String email = (String) servletRequest.getAttribute("email");
             int orgId = adminRepo.findByEmail(email).get().getOrg().getId();
             Saas saasObject = saasRepo.findById(6).orElse(null);
-            CompletableFuture<List<TopUserDTO>> future = driveFileSerivce.getTopUsersAsync(orgId, Objects.requireNonNull(saasObject).getId().intValue());
+            CompletableFuture<List<TopUserDTO>> future = fileUtil.getTopUsersAsync(orgId, Objects.requireNonNull(saasObject).getId().intValue());
             List<TopUserDTO> topuser = future.get();
             response.put("status", 200);
             response.put("data", topuser);

@@ -71,7 +71,6 @@ public class GoogleUtil {
         NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8088).setCallbackPath("/login/oauth2/code/google").build();
 
-
         // 새로 발급된 자격 증명을 DB에 저장
 //        workspaceConfigRepo.updateToken(workspace_id, credential.getAccessToken());
 
@@ -81,12 +80,7 @@ public class GoogleUtil {
 
     public Drive getDriveService(int workspace_id) throws Exception {
         try {
-            String accessToken = getCredentials().getAccessToken();
-            log.info("Access token: {}", accessToken);
-
-//            Credential credential = selectToken(workspace_id);
-
-            return new Drive.Builder(GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, getCredentials())
+            return new Drive.Builder(GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, selectToken(workspace_id))
                     .setApplicationName(APPLICATION_NAME)
                     .build();
         } catch (Exception e) {
