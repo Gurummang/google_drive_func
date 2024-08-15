@@ -1,5 +1,9 @@
 package com.GASB.google_drive_func.service.file;
 
+import com.GASB.google_drive_func.model.dto.TopUserDTO;
+import com.GASB.google_drive_func.model.dto.file.DirveFileSizeDto;
+import com.GASB.google_drive_func.model.dto.file.DriveFileCountDto;
+import com.GASB.google_drive_func.model.dto.file.DriveRecentFileDTO;
 import com.GASB.google_drive_func.model.entity.*;
 import com.GASB.google_drive_func.model.mapper.DriveFileMapper;
 import com.GASB.google_drive_func.model.repository.user.MonitoredUserRepo;
@@ -7,15 +11,17 @@ import com.GASB.google_drive_func.model.repository.files.FileActivityRepo;
 import com.GASB.google_drive_func.model.repository.files.FileUploadRepository;
 import com.GASB.google_drive_func.model.repository.files.StoredFileRepository;
 import com.GASB.google_drive_func.model.repository.org.WorkspaceConfigRepo;
-import com.GASB.google_drive_func.service.MessageMannager;
+import com.GASB.google_drive_func.service.event.MessageSender;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
@@ -26,9 +32,11 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static com.nimbusds.openid.connect.sdk.id.HashBasedPairwiseSubjectCodec.HASH_ALGORITHM;
 
@@ -41,12 +49,12 @@ public class FileUtil {
     private final WorkspaceConfigRepo worekSpaceRepo;
     private final StoredFileRepository storedFilesRepository;
     private final DriveFileMapper driveFileMapper;
-    private final MonitoredUserRepo MonitoredUsersRepo;
+    private final MonitoredUserRepo monitoredUserRepo;
     private final FileUploadRepository fileUploadRepository;
     private final FileActivityRepo activitiesRepository;
     private final S3Client s3Client;
     private final ScanUtil scanUtil;
-    private final MessageMannager messageMannager;
+    private final MessageSender messageSender;
 
     private static final Path BASE_PATH = Paths.get("downloads");
 
@@ -189,7 +197,7 @@ public class FileUtil {
         String filePath = BASE_PATH.resolve(file.getName()).toString();
 
 
-        MonitoredUsers user = MonitoredUsersRepo.fineByUserId(file.getLastModifyingUser().getPermissionId()).orElse(null);
+        MonitoredUsers user = monitoredUserRepo.fineByUserId(file.getLastModifyingUser().getPermissionId()).orElse(null);
         StoredFile storedFileObj = driveFileMapper.toStoredFileEntity(file, hash, savedPath);
         FileUploadTable fileUploadTableObj = driveFileMapper.toFileUploadEntity(file, orgSaaSObject, hash);
         Activities activities = driveFileMapper.toActivityEntity(file, event_type, user, savedPath);
@@ -198,8 +206,8 @@ public class FileUtil {
 
                 if (!storedFilesRepository.existsBySaltedHash(storedFileObj.getSaltedHash())) {
                     storedFilesRepository.save(storedFileObj);
-                    messageMannager.sendMessage(storedFileObj.getId());
-                    messageMannager.sendGroupingMessage(activities.getId());
+                    messageSender.sendMessage(storedFileObj.getId());
+                    messageSender.sendGroupingMessage(activities.getId());
                     log.info("File uploaded successfully: {}", file.getName());
                 } else {
                     log.warn("Duplicate file detected in StoredFile: {}", file.getName());
@@ -239,5 +247,68 @@ public class FileUtil {
         } catch (Exception e) {
             log.error("Error uploading file to S3: {}", e.getMessage(), e);
         }
+    }
+    public DriveFileCountDto FileCountSum(int orgId, int saasId) {
+        return DriveFileCountDto.builder()
+                .totalFiles(storedFilesRepository.countTotalFiles(orgId, saasId))
+                .sensitiveFiles(storedFilesRepository.countSensitiveFiles(orgId, saasId))
+                .maliciousFiles(storedFilesRepository.countMaliciousFiles(orgId, saasId))
+                .connectedAccounts(storedFilesRepository.countConnectedAccounts(orgId, saasId))
+                .build();
+    }
+
+    public List<DriveRecentFileDTO> DriveRecentFiles(int orgId, int saasId) {
+        try {
+            return fileUploadRepository.findRecentFilesByOrgIdAndSaasId(orgId, saasId);
+        } catch (Exception e) {
+            log.error("Error retrieving recent files for org_id: {} and saas_id: {}", orgId, saasId, e);
+            return Collections.emptyList();
+        }
+    }
+
+    @Async("threadPoolTaskExecutor")
+    public CompletableFuture<List<TopUserDTO>> getTopUsersAsync(int orgId, int saasId) {
+        return CompletableFuture.supplyAsync(() -> getTopUsers(orgId, saasId));
+    }
+
+    // 쿼리문 사용할때 네이티브 쿼리면 DTO에 직접 매핑시켜줘야함
+    // JPQL이면 DTO에 매핑시켜줄 필요 없음
+    public List<TopUserDTO> getTopUsers(int orgId, int saasId) {
+        try {
+            List<Object[]> results = monitoredUserRepo.findTopUsers(orgId, saasId);
+
+            return results.stream().map(result -> new TopUserDTO(
+                    (String) result[0],
+                    ((Number) result[1]).longValue(),
+                    ((Number) result[2]).longValue(),
+                    ((java.sql.Timestamp) result[3]).toLocalDateTime()
+            )).collect(Collectors.toList());
+
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving top users", e);
+        }
+    }
+
+    public DirveFileSizeDto sumOfFileSize(int orgId, int saasId) {
+        return DirveFileSizeDto.builder()
+                .totalSize((float) getTotalFileSize(orgId,saasId) / 1073741824)
+                .sensitiveSize((float) getTotalDlpFileSize(orgId,saasId) / 1073741824)
+                .maliciousSize((float) getTotalMaliciousFileSize(orgId,saasId) / 1073741824)
+                .build();
+    }
+
+    public Long getTotalFileSize(int orgId, int saasId) {
+        Long totalFileSize = storedFilesRepository.getTotalFileSize(orgId, saasId);
+        return totalFileSize != null ? totalFileSize : 0L; // null 반환 방지
+    }
+
+    public Long getTotalMaliciousFileSize(int orgId, int saasId) {
+        Long totalMaliciousFileSize = storedFilesRepository.getTotalMaliciousFileSize(orgId, saasId);
+        return totalMaliciousFileSize != null ? totalMaliciousFileSize : 0L; // null 반환 방지
+    }
+
+    public Long getTotalDlpFileSize(int orgId, int saasId) {
+        Long totalDlpFileSize = storedFilesRepository.getTotalDlpFileSize(orgId, saasId);
+        return totalDlpFileSize != null ? totalDlpFileSize : 0L; // null 반환 방지
     }
 }

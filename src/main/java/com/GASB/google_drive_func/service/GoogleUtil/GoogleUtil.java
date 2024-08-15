@@ -82,11 +82,11 @@ public class GoogleUtil {
     public Drive getDriveService(int workspace_id) throws Exception {
         try {
             String accessToken = getCredentials().getAccessToken();
-            log.info("Access token: {}", accessToken);
+//            log.info("Access token: {}", accessToken);
 
-//            Credential credential = selectToken(workspace_id);
+            Credential credential = selectToken(workspace_id);
 
-            return new Drive.Builder(GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, getCredentials())
+            return new Drive.Builder(GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, credential)
                     .setApplicationName(APPLICATION_NAME)
                     .build();
         } catch (Exception e) {
