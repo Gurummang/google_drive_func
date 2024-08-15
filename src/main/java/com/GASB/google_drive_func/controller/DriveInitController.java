@@ -89,28 +89,28 @@
 //        }
 //    }
 //
-//    @GetMapping("/all")
-//    public ResponseEntity<Map<String, String>> fetchAndSaveAll(@RequestBody String email) throws Exception {
-//        Map<String, String> response = new HashMap<>();
-//        try{
-//            int org_id = 1;
-//            Saas google_drive_saas_obj = SaasRepo.findById(3).orElse(null);
-//            List<String> google_dribe_saas_list = orgSaaSRepo.findSpaceIdByOrgIdAndSaas(org_id, google_drive_saas_obj);
-//            for (String sapceId : google_dribe_saas_list){
-//                driveApiService.fetchUserList(16,sapceId);
-//            }
-//            for (String spaceId : google_dribe_saas_list){
-//                driveFileService.fetchAndStoreFiles(1, "file_upload");
-//            }
-//            response.put("status", "success");
-//            response.put("message", "All saved successfully");
-//            return ResponseEntity.ok(response);
-//        } catch (Exception e) {
-//            response.put("status", "error");
-//            response.put("message", "Error fetching files");
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-//        }
-//    }
+////    @GetMapping("/all")
+////    public ResponseEntity<Map<String, String>> fetchAndSaveAll(@RequestBody String email) throws Exception {
+////        Map<String, String> response = new HashMap<>();
+////        try{
+////            int org_id = 1;
+////            Saas google_drive_saas_obj = SaasRepo.findById(3).orElse(null);
+////            List<String> google_dribe_saas_list = orgSaaSRepo.findSpaceIdByOrgIdAndSaas(org_id, google_drive_saas_obj);
+////            for (String sapceId : google_dribe_saas_list){
+////                driveApiService.fetchUserList(16,sapceId);
+////            }
+////            for (String spaceId : google_dribe_saas_list){
+////                driveFileService.fetchAndStoreFiles(1, "file_upload");
+////            }
+////            response.put("status", "success");
+////            response.put("message", "All saved successfully");
+////            return ResponseEntity.ok(response);
+////        } catch (Exception e) {
+////            response.put("status", "error");
+////            response.put("message", "Error fetching files");
+////            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+////        }
+////    }
 //}
 //
 //
