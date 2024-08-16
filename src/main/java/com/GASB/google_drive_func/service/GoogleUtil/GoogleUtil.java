@@ -2,6 +2,7 @@ package com.GASB.google_drive_func.service.GoogleUtil;
 
 import com.GASB.google_drive_func.model.entity.WorkspaceConfig;
 import com.GASB.google_drive_func.model.repository.org.WorkspaceConfigRepo;
+import com.GASB.google_drive_func.service.AESUtil;
 import com.google.api.client.auth.oauth2.BearerToken;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.auth.oauth2.TokenResponse;
@@ -15,6 +16,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -29,11 +31,16 @@ public class GoogleUtil {
 
 //    private final GoogleAuthorizationCodeFlow googleAuthorizationCodeFlow;
     private final WorkspaceConfigRepo workspaceConfigRepo;
+    private final AESUtil aesUtil;
 
     @Autowired
-    public GoogleUtil(WorkspaceConfigRepo workspaceConfigRepo) {
+    public GoogleUtil(WorkspaceConfigRepo workspaceConfigRepo, AESUtil aesUtil) {
         this.workspaceConfigRepo = workspaceConfigRepo;
+        this.aesUtil = aesUtil;
     }
+
+    @Value("${aes.key}")
+    private String key;
 
     private Credential selectToken(int workspace_id) {
         try {
@@ -43,7 +50,7 @@ public class GoogleUtil {
                 throw new IllegalArgumentException("Invalid workspace ID");
             }
             return new Credential(BearerToken.authorizationHeaderAccessMethod())
-                    .setAccessToken(workspaceConfig.getToken()); // 토큰을 반환
+                    .setAccessToken(AESUtil.decrypt(workspaceConfig.getToken(),key)); // 토큰을 반환
         } catch (Exception e) {
             log.error("An error occurred while selecting the token: {}", e.getMessage(), e);
             return null;
