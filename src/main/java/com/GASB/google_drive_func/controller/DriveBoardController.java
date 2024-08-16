@@ -38,7 +38,7 @@ public class DriveBoardController {
 
     @GetMapping("/files/size")
     @ValidateJWT
-    public ResponseEntity<Map<String,?>> fetchFileSize(HttpServletRequest servletRequest) {
+    public ResponseEntity<?> fetchFileSize(HttpServletRequest servletRequest) {
         Map<String, Object> response = new HashMap<>();
         try {
             if (servletRequest.getAttribute("error") != null) {
@@ -49,13 +49,9 @@ public class DriveBoardController {
             }
             String email = (String) servletRequest.getAttribute("email");
             int orgId = adminRepo.findByEmail(email).get().getOrg().getId();
-            DirveFileSizeDto slackFileSizeDto = fileUtil.sumOfFileSize(orgId, 6);
+            DirveFileSizeDto driveFileSizeDto = fileUtil.sumOfFileSize(orgId, 6);
 
-            // 응답에 status 추가
-            response.put("status", 200);
-            response.put("data", slackFileSizeDto);
-
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(driveFileSizeDto);
         } catch (Exception e) {
             response.put("status", 500);
             response.put("data", new DirveFileSizeDto(0, 0, 0));
@@ -67,7 +63,7 @@ public class DriveBoardController {
 
     @GetMapping("/files/count")
     @ValidateJWT
-    public ResponseEntity<Map<String, ?>> fetchFileCount(HttpServletRequest servletRequest) {
+    public ResponseEntity<?> fetchFileCount(HttpServletRequest servletRequest) {
         Map<String, Object> response = new HashMap<>();
         try {
             if (servletRequest.getAttribute("error") != null) {
@@ -78,10 +74,9 @@ public class DriveBoardController {
             }
             String email = (String) servletRequest.getAttribute("email");
             int orgId = adminRepo.findByEmail(email).get().getOrg().getId();
-            DriveFileCountDto slackFileCountDto = fileUtil.FileCountSum(orgId, 6);
-            response.put("status", 200);
-            response.put("data", slackFileCountDto);
-            return ResponseEntity.ok(response);
+            DriveFileCountDto driveFileCountDto = fileUtil.FileCountSum(orgId, 6);
+
+            return ResponseEntity.ok(driveFileCountDto);
         } catch (Exception e) {
             response.put("status", 500);
             response.put("data", new DriveFileCountDto(0, 0, 0, 0));
@@ -91,7 +86,7 @@ public class DriveBoardController {
 
     @GetMapping("/files/recent")
     @ValidateJWT
-    public ResponseEntity<Map<String, ?>> fetchRecentFiles(HttpServletRequest servletRequest) {
+    public ResponseEntity<?> fetchRecentFiles(HttpServletRequest servletRequest) {
         Map<String, Object> response = new HashMap<>();
         try {
             if (servletRequest.getAttribute("error") != null) {
@@ -104,9 +99,8 @@ public class DriveBoardController {
             int orgId = adminRepo.findByEmail(email).get().getOrg().getId();
             Saas saasObject = saasRepo.findById(6).orElse(null);
             List<DriveRecentFileDTO> recentFiles = fileUtil.DriveRecentFiles(orgId, Objects.requireNonNull(saasObject).getId().intValue());
-            response.put("status", 200);
-            response.put("data", recentFiles);
-            return ResponseEntity.ok(response);
+
+            return ResponseEntity.ok(recentFiles);
         } catch (Exception e) {
             response.put("status", 500);
             response.put("data", Collections.singletonList(new DriveRecentFileDTO("Error", "Server Error", "N/A", LocalDateTime.now())));
@@ -116,7 +110,7 @@ public class DriveBoardController {
 
     @GetMapping("/user-ranking")
     @ValidateJWT
-    public ResponseEntity<Map<String, ?>> fetchUserRanking(HttpServletRequest servletRequest) {
+    public ResponseEntity<?> fetchUserRanking(HttpServletRequest servletRequest) {
         Map<String, Object> response = new HashMap<>();
         try {
             if (servletRequest.getAttribute("error") != null) {
@@ -130,9 +124,8 @@ public class DriveBoardController {
             Saas saasObject = saasRepo.findById(6).orElse(null);
             CompletableFuture<List<TopUserDTO>> future = fileUtil.getTopUsersAsync(orgId, Objects.requireNonNull(saasObject).getId().intValue());
             List<TopUserDTO> topuser = future.get();
-            response.put("status", 200);
-            response.put("data", topuser);
-            return ResponseEntity.ok(response);
+
+            return ResponseEntity.ok(topuser);
         } catch (Exception e) {
             response.put("status", 500);
             response.put("data", Collections.singletonList(new TopUserDTO("Error", 0L, 0L, LocalDateTime.now())));
