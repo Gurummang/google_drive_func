@@ -31,7 +31,7 @@ public class DriveFileMapper {
             return null;
         }
         return StoredFile.builder()
-                .type(file.getMimeType())
+                .type(file.getFileExtension())
                 .size(file.getSize().intValue())
                 .savePath(bucketName + "/" + filePath)
                 .saltedHash(hash)
