@@ -46,6 +46,7 @@ public class DriveFileMapper {
                 .orgSaaS(orgSaas)
                 .saasFileId(file.getId())
                 .hash(hash)
+                .deleted(false)
                 .timestamp(LocalDateTime.ofInstant(
                                 Instant.ofEpochMilli(file.getCreatedTime().getValue()),
                                 ZoneId.systemDefault()))
