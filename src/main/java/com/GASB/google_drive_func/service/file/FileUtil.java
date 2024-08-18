@@ -207,23 +207,39 @@ public class FileUtil {
 
                 if (!storedFilesRepository.existsBySaltedHash(storedFileObj.getSaltedHash())) {
                     storedFilesRepository.save(storedFileObj);
-                    messageSender.sendMessage(storedFileObj.getId());
-                    messageSender.sendGroupingMessage(activities.getId());
-                    log.info("File uploaded successfully: {}", file.getName());
+                    try {
+                        messageSender.sendMessage(storedFileObj.getId());
+                    } catch (Exception e) {
+                        log.error("Error sending message to file_queue: {}", e.getMessage(), e);
+                    }
+                    try {
+                        messageSender.sendGroupingMessage(activities.getId());
+                    } catch (Exception e) {
+                        log.error("Error sending message to grouping_queue: {}", e.getMessage(), e);
+                    }
+                    log.info("File uploaded successfully stored_file table: {}", file.getName());
                 } else {
                     log.warn("Duplicate file detected in StoredFile: {}", file.getName());
                 }
 
 
                 if (!fileUploadRepository.existsBySaasFileIdAndTimestamp(fileUploadTableObj.getSaasFileId(), fileUploadTableObj.getTimestamp())) {
-                    fileUploadRepository.save(fileUploadTableObj);
-                    log.info("File uploaded successfully: {}", file.getName());
+                    try {
+                        fileUploadRepository.save(fileUploadTableObj);
+                    } catch (Exception e) {
+                        log.error("Error saving file_upload table: {}", e.getMessage(), e);
+                    }
+                    log.info("File uploaded successfully in file_upload table: {}", file.getName());
                 } else {
                     log.warn("Duplicate file detected in FileUploadTable: {}", file.getName());
                 }
                 if (!activitiesRepository.existsBySaasFileIdAndEventTs(activities.getSaasFileId(), activities.getEventTs())) {
-                    activitiesRepository.save(activities);
-                    log.info("Activity logged successfully: {}", file.getName());
+                    try {
+                        activitiesRepository.save(activities);
+                        log.info("Activity logged successfully activity table: {}", file.getName());
+                    } catch (Exception e) {
+                        log.error("Error saving activities table: {}", e.getMessage(), e);
+                    }
                 } else {
                     log.warn("Duplicate activity detected in Activities Table: {}", file.getName());
                 }
