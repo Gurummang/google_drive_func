@@ -33,10 +33,11 @@ public class FileUploadTable {
     private boolean deleted;
 
     @Builder
-    public FileUploadTable(OrgSaaS orgSaaS, String saasFileId, String hash, LocalDateTime timestamp) {
+    public FileUploadTable(OrgSaaS orgSaaS, String saasFileId, String hash, LocalDateTime timestamp, boolean deleted) {
         this.orgSaaS = orgSaaS;
         this.saasFileId = saasFileId;
         this.hash = hash;
         this.timestamp = timestamp;
+        this.deleted = deleted;
     }
 }
