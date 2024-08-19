@@ -212,11 +212,6 @@ public class FileUtil {
                     } catch (Exception e) {
                         log.error("Error sending message to file_queue: {}", e.getMessage(), e);
                     }
-                    try {
-                        messageSender.sendGroupingMessage(activities.getId());
-                    } catch (Exception e) {
-                        log.error("Error sending message to grouping_queue: {}", e.getMessage(), e);
-                    }
                     log.info("File uploaded successfully stored_file table: {}", file.getName());
                 } else {
                     log.warn("Duplicate file detected in StoredFile: {}", file.getName());
@@ -239,6 +234,11 @@ public class FileUtil {
                         log.info("Activity logged successfully activity table: {}", file.getName());
                     } catch (Exception e) {
                         log.error("Error saving activities table: {}", e.getMessage(), e);
+                    }
+                    try {
+                        messageSender.sendGroupingMessage(activities.getId());
+                    } catch (Exception e) {
+                        log.error("Error sending message to grouping_queue: {}", e.getMessage(), e);
                     }
                 } else {
                     log.warn("Duplicate activity detected in Activities Table: {}", file.getName());
