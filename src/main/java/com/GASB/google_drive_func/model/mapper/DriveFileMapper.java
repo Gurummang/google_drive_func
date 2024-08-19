@@ -68,24 +68,4 @@ public class DriveFileMapper {
                 .uploadChannel(file.getParents().isEmpty() ? null : channel)
                 .build();
     }
-
-    public void EntireEntityConverter(File file, String event_type, MonitoredUsers user, String channel, String hash, String filePath, OrgSaaS orgSaas) {
-        try {
-
-            StoredFile storedFile = toStoredFileEntity(file, hash, filePath);
-            storedFileRepository.save(storedFile);
-
-            FileUploadTable fileUploadTable = toFileUploadEntity(file, orgSaas, hash);
-            fileUploadRepository.save(fileUploadTable);
-
-            Activities activities = toActivityEntity(file, event_type, user, channel);
-            fileActivityRepo.save(activities);
-
-        } catch (Exception e) {
-            log.error("Error while converting and saving entities: {}", e.getMessage(), e);
-        }
-    }
-
-
-
 }
