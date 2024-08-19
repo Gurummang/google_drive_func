@@ -80,6 +80,7 @@ public class RabbitMQConfig {
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setExchange(exchangeName);
+        rabbitTemplate.setRoutingKey(routingKey);
         return rabbitTemplate;
     }
 
