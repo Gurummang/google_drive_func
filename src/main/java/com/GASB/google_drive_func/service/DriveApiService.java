@@ -103,6 +103,8 @@ public class DriveApiService {
                             }
                             log.info("Permission ID: {}, Role: {}, Email: {}",
                                     permission.getId(), permission.getRole(), permission.getEmailAddress());
+                        } else {
+                            log.info("User with ID: {} already exists", permission.getId());
                         }
                     }
                 }
