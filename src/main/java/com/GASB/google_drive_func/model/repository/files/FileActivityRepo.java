@@ -11,13 +11,8 @@ import java.util.Optional;
 
 @Repository
 public interface FileActivityRepo extends JpaRepository<Activities, Long>{
-    Optional<Activities> findBysaasFileId(String fileId);
 
-    Optional<Activities> findBySaasFileIdAndEventTs(String fileId, LocalDateTime eventTs);
-
-    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN TRUE ELSE FALSE END FROM Activities a WHERE a.saasFileId = :id AND a.eventTs = :eventTs")
-    boolean existsObjectById(@Param("id") String saasFileId, @Param("eventTs") LocalDateTime eventTs);
-
-    boolean existsBySaasFileIdAndEventTs(String saasFileId, LocalDateTime eventTs);
+    @Query("SELECT a FROM Activities a WHERE a.saasFileId = :saasFileId AND a.eventTs = :eventTs")
+    boolean existsBySaasFileIdAndEventTs(@Param("saasFileId")String saasFileId, @Param("eventTs")LocalDateTime eventTs);
 
 }
