@@ -15,6 +15,7 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -28,8 +29,6 @@ public class GoogleUtil {
 
     private static final String APPLICATION_NAME = "grummang-google-dirve-func";
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
-
-//    private final GoogleAuthorizationCodeFlow googleAuthorizationCodeFlow;
     private final WorkspaceConfigRepo workspaceConfigRepo;
     private final AESUtil aesUtil;
 
@@ -42,7 +41,7 @@ public class GoogleUtil {
     @Value("${aes.key}")
     private String key;
 
-    private Credential selectToken(int workspace_id) {
+    public Credential selectToken(int workspace_id) {
         try {
             // workspace_id를 통해 해당 workspace의 token을 가져옴
             WorkspaceConfig workspaceConfig = workspaceConfigRepo.findById(workspace_id).orElse(null);
@@ -57,33 +56,6 @@ public class GoogleUtil {
         }
     }
 
-//    private TokenResponse refreshToken(GoogleAuthorizationCodeFlow flow, String refreshToken) throws IOException {
-//        return flow.newTokenRequest(refreshToken).setGrantType("refresh_token").execute();
-//    }
-//
-//    private Credential refreshAccessToken(Credential credential, int workspace_id) throws IOException {
-//        TokenResponse response = refreshToken(googleAuthorizationCodeFlow, credential.getRefreshToken());
-//        log.info("Access token refreshed successfully.");
-//        credential.setAccessToken(response.getAccessToken());
-//        credential.setExpiresInSeconds(response.getExpiresInSeconds());
-//        // 수정: 새로운 토큰을 DB에 저장
-//        workspaceConfigRepo.updateToken(workspace_id, response.getAccessToken());
-//        return credential;
-//    }
-//
-//    protected Credential getCredentials() throws Exception {
-//
-//        // 기존의 자격 증명을 무시하고 항상 새로 발급받도록 함
-//        NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-//        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8088).setCallbackPath("/login/oauth2/code/google").build();
-//
-//        // 새로 발급된 자격 증명을 DB에 저장
-////        workspaceConfigRepo.updateToken(workspace_id, credential.getAccessToken());
-//
-//        return new AuthorizationCodeInstalledApp(googleAuthorizationCodeFlow, receiver).authorize("user");
-//    }
-
-
     public Drive getDriveService(int workspace_id) throws Exception {
         try {
             return new Drive.Builder(GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, selectToken(workspace_id))
@@ -95,7 +67,40 @@ public class GoogleUtil {
         }
     }
 
-    public void getTokenExpiredTime(Credential credential) {
-        log.info("Token Expired Time: {}", credential.getExpiresInSeconds());
+
+    // 수정: 토큰 갱신
+//    public void refreshToken(int workspace_id) {
+//        try {
+//            WorkspaceConfig workspaceConfig = workspaceConfigRepo.findById(workspace_id).orElse(null);
+//            if (workspaceConfig == null) { // 수정: 잘못된 workspace ID 처리
+//                throw new IllegalArgumentException("Invalid workspace ID");
+//            }
+//            String refreshToken = AESUtil.decrypt(workspaceConfig.getRefreshToken(), key);
+//            if (Objects.isNull(refreshToken)) {
+//                throw new IllegalArgumentException("Invalid refresh token");
+//            }
+//            TokenResponse tokenResponse = new TokenResponse();
+//            tokenResponse.setRefreshToken(refreshToken);
+//            GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
+//                    GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, workspaceConfig.getClientId(), workspaceConfig.getClientSecret(),
+//                    workspaceConfig.getScopes())
+//                    .build();
+//            Credential credential = new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize("user");
+//            tokenResponse = flow.newTokenRequest(credential.getRefreshToken()).setScopes(workspaceConfig.getScopes()).execute();
+//            workspaceConfig.setToken(AESUtil.encrypt(tokenResponse.getAccessToken(), key));
+//            workspaceConfigRepo.save(workspaceConfig);
+//        } catch (Exception e) {
+//            log.error("An error occurred while refreshing the token: {}", e.getMessage(), e);
+//        }
+//    }
+
+
+    private void TokenUpdate(String Token, int workdpace_id){
+        try {
+            String freshToken = AESUtil.encrypt(Token, key);
+            workspaceConfigRepo.updateToken(workdpace_id, freshToken);
+        } catch (Exception e) {
+            log.error("An error occurred while updating the token: {}", e.getMessage(), e);
+        }
     }
 }
