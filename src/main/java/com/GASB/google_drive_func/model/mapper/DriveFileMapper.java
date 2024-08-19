@@ -4,6 +4,7 @@ import com.GASB.google_drive_func.model.entity.*;
 import com.GASB.google_drive_func.model.repository.files.FileActivityRepo;
 import com.GASB.google_drive_func.model.repository.files.FileUploadRepository;
 import com.GASB.google_drive_func.model.repository.files.StoredFileRepository;
+import com.google.api.client.util.DateTime;
 import com.google.api.services.drive.model.File;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,19 +54,40 @@ public class DriveFileMapper {
                 .build();
     }
 
+
     public Activities toActivityEntity(File file, String eventType, MonitoredUsers user, String channel) {
         if (file == null) {
             return null;
         }
+
+        // 생성 시간의 null 체크
+        DateTime createdTime = file.getCreatedTime();
+        LocalDateTime eventTs = null;
+        if (createdTime != null) {
+            eventTs = LocalDateTime.ofInstant(
+                    Instant.ofEpochMilli(createdTime.getValue()), ZoneId.systemDefault()
+            );
+        }
+
+        // eventType null 체크
+        if (eventType == null || eventType.isEmpty()) {
+            eventType = "file_upload";
+        }
+
+        // file.getParents() null 체크
+        String uploadChannel = null;
+        if (file.getParents() != null && !file.getParents().isEmpty()) {
+            uploadChannel = channel;
+        }
+
         return Activities.builder()
                 .user(user)
-                .eventType(eventType.isEmpty() ? "file_upload" : eventType)
+                .eventType(eventType)
                 .saasFileId(file.getId())
                 .fileName(file.getName())
-                .eventTs(LocalDateTime.ofInstant(
-                        Instant.ofEpochMilli(file.getCreatedTime().getValue()),
-                        ZoneId.systemDefault()))
-                .uploadChannel(file.getParents().isEmpty() ? null : channel)
+                .eventTs(eventTs)  // eventTs가 null일 수 있음에 유의
+                .uploadChannel(uploadChannel)
                 .build();
     }
+
 }
