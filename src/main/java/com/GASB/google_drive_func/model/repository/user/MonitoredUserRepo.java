@@ -13,8 +13,9 @@ import java.util.Optional;
 public interface MonitoredUserRepo extends JpaRepository<MonitoredUsers, Long> {
     Optional<MonitoredUsers> findByUserId(String userId);
 
-    @Query("SELECT u FROM MonitoredUsers u WHERE u.userId = :user_id AND u.orgSaaS.id = :orgSaaSId")
-    boolean existsByUserId(@Param("user_id")String userId, @Param("orgSaaSId") int orgSaaSId);
+    @Query("SELECT COUNT(u) > 0 FROM MonitoredUsers u WHERE u.userId = :user_id AND u.orgSaaS.id = :orgSaaSId")
+    boolean existsByUserId(@Param("user_id") String userId, @Param("orgSaaSId") int orgSaaSId);
+
 
     @Query("SELECT u FROM MonitoredUsers u WHERE u.userId = :user_id AND u.orgSaaS.id = :orgSaaSId")
     Optional<MonitoredUsers> fineByUserId(@Param("user_id") String userId , @Param("orgSaaSId") int orgSaaSId);
