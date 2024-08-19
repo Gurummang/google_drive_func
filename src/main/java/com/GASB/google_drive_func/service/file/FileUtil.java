@@ -198,7 +198,7 @@ public class FileUtil {
         String filePath = BASE_PATH.resolve(file.getName()).toString();
 
 
-        MonitoredUsers user = monitoredUserRepo.fineByUserId(file.getLastModifyingUser().getPermissionId()).orElse(null);
+        MonitoredUsers user = monitoredUserRepo.fineByUserId(file.getLastModifyingUser().getPermissionId(),workspaceId).orElse(null);
         StoredFile storedFileObj = driveFileMapper.toStoredFileEntity(file, hash, savedPath);
         FileUploadTable fileUploadTableObj = driveFileMapper.toFileUploadEntity(file, orgSaaSObject, hash);
         Activities activities = driveFileMapper.toActivityEntity(file, event_type, user, savedPath);

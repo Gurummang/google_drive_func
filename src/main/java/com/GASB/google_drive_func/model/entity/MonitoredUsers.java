@@ -13,6 +13,9 @@ import java.sql.Timestamp;
 @Table(name = "monitored_users")
 public class MonitoredUsers {
     @Id
+    @Column(name = "id")
+    private int id;
+
     @Column(name = "user_id", unique = true, length = 100)
     private String userId;
 

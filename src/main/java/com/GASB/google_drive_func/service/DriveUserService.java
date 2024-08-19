@@ -51,7 +51,7 @@ public class DriveUserService {
                     for (Permission permission : permissionList.getPermissions()) {
                         if (permission.getEmailAddress() != null) {
                             MonitoredUsers user = driveUserMapper.toEntity(permission, orgSaaSObject);
-                            if (!monitoredUserRepo.existsByUserId(permission.getId())) {
+                            if (!monitoredUserRepo.existsByUserId(permission.getId(), workspaceId)) {
                                 monitoredUserRepo.save(user);
                             }
                         }

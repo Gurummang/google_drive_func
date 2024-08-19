@@ -17,7 +17,7 @@ public class Activities {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     private MonitoredUsers user;
 
     @Column(name = "event_type", length = 100)

@@ -95,7 +95,8 @@ public class ScanUtil {
 
         int signatureLength = HeaderSignature.getSignatureLengthByExtension(extension);
         if (signatureLength == 0) {
-            throw new IllegalArgumentException("Invalid file extension: " + extension);
+            log.info("No signature length for extension: {}", extension);
+            return "unknown";
         }
 
         byte[] bytes = new byte[signatureLength];
@@ -103,7 +104,8 @@ public class ScanUtil {
         try (FileInputStream fis = new FileInputStream(file)) {
             int bytesRead = fis.read(bytes);
             if (bytesRead < signatureLength) {
-                throw new IOException("Could not read the complete file signature");
+                log.error("Could not read the complete file signature");
+                return "unknown";
             }
         }
 

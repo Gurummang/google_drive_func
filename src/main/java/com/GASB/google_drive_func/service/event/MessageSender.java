@@ -9,19 +9,19 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class MessageSender {
 
-    private final RabbitTemplate rabbitTemplate;
+    private final RabbitTemplate fileQueueRabbitTemplate;
     private final RabbitTemplate groupingRabbitTemplate;
 
 
     @Autowired
     public MessageSender(RabbitTemplate rabbitTemplate, RabbitTemplate groupingRabbitTemplate) {
-        this.rabbitTemplate = rabbitTemplate;
+        this.fileQueueRabbitTemplate = rabbitTemplate;
         this.groupingRabbitTemplate = groupingRabbitTemplate;
     }
 
     public void sendMessage(Long message) {
-        rabbitTemplate.convertAndSend(message);
-        log.info("Sent message to default queue: " + message);
+        fileQueueRabbitTemplate.convertAndSend(message);
+        log.info("Sent message to file queue: " + message);
     }
 
     public void sendGroupingMessage(Long message) {
@@ -30,7 +30,7 @@ public class MessageSender {
     }
 
     public void sendMessageToQueue(Long message, String queueName) {
-        rabbitTemplate.convertAndSend(queueName, message);
+        fileQueueRabbitTemplate.convertAndSend(queueName, message);
         log.info("Sent message to queue " + queueName + ": " + message);
     }
 }
