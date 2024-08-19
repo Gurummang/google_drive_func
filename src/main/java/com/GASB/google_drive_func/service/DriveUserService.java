@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -51,7 +52,7 @@ public class DriveUserService {
                     for (Permission permission : permissionList.getPermissions()) {
                         if (permission.getEmailAddress() != null) {
                             MonitoredUsers user = driveUserMapper.toEntity(permission, orgSaaSObject);
-                            if (!monitoredUserRepo.existsByUserId(permission.getId(), workspaceId)) {
+                            if (!monitoredUserRepo.existsByUserId(permission.getId(), Objects.requireNonNull(orgSaaSObject).getId())) {
                                 monitoredUserRepo.save(user);
                             }
                         }
