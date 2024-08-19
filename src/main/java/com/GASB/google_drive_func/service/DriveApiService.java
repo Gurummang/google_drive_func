@@ -95,7 +95,7 @@ public class DriveApiService {
                         log.info("Permission ID: {}, Role: {}, Email: {}, DisplayName: {}",
                                 permission.getId(), permission.getRole(), permission.getEmailAddress(), permission.getDisplayName());
                         MonitoredUsers user = DriveUserMapper.toEntity(permission, orgSaaSObject);
-                        if (!monitoredUserRepo.existsByUserId(permission.getId())) {
+                        if (!monitoredUserRepo.existsByUserId(permission.getId(), workspace_id)) {
                             try{
                                 monitoredUserRepo.save(user);
                             } catch (Exception e) {
