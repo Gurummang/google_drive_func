@@ -14,6 +14,7 @@ import java.sql.Timestamp;
 public class MonitoredUsers {
     @Id
     @Column(name = "id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
     @Column(name = "user_id", unique = true, length = 100)
