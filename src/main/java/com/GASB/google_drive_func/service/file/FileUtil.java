@@ -12,6 +12,8 @@ import com.GASB.google_drive_func.model.repository.files.FileUploadRepository;
 import com.GASB.google_drive_func.model.repository.files.StoredFileRepository;
 import com.GASB.google_drive_func.model.repository.org.WorkspaceConfigRepo;
 import com.GASB.google_drive_func.service.event.MessageSender;
+import com.GASB.google_drive_func.tlsh.Tlsh;
+import com.GASB.google_drive_func.tlsh.TlshCreator;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 import jakarta.transaction.Transactional;
@@ -112,6 +114,27 @@ public class FileUtil {
     }
 
 
+    //TLSH 해시 계산
+    private Tlsh computeTlsHash(byte[] fileData) throws IOException {
+        if (fileData == null) {
+            throw new IllegalArgumentException("fileData cannot be null");
+        }
+        final int BUFFER_SIZE = 4096;
+        TlshCreator tlshCreator = new TlshCreator();
+
+        try (InputStream is = new ByteArrayInputStream(fileData)) {
+            byte[] buf = new byte[BUFFER_SIZE];
+            int bytesRead;
+            while ((bytesRead = is.read(buf)) != -1) {
+                tlshCreator.update(buf, 0, bytesRead);
+            }
+        } catch (IOException e) {
+            throw new IOException("Error computing TLSH hash", e);
+        }
+
+        return tlshCreator.getHash();
+    }
+
     @Async("threadPoolTaskExecutor")
     @Transactional
     public CompletableFuture<Void> processAndStoreFile(File file, OrgSaaS orgSaaSObject, int workspaceId, String event_type, Drive service) {
@@ -189,6 +212,7 @@ public class FileUtil {
 
     private Void handleFileProcessing(File file, OrgSaaS orgSaaSObject, byte[] fileData, int workspaceId, String event_type, Drive service) throws IOException, NoSuchAlgorithmException {
         String hash = calculateHash(fileData);
+        String tlsh = computeTlsHash(fileData).toString();
         WorkspaceConfig config = worekSpaceRepo.findById(workspaceId).orElse(null);
         String workspaceName = Objects.requireNonNull(config).getWorkspaceName();
 
@@ -201,7 +225,7 @@ public class FileUtil {
         MonitoredUsers user = monitoredUserRepo.fineByUserId(file.getLastModifyingUser().getPermissionId(),workspaceId).orElse(null);
         StoredFile storedFileObj = driveFileMapper.toStoredFileEntity(file, hash, savedPath);
         FileUploadTable fileUploadTableObj = driveFileMapper.toFileUploadEntity(file, orgSaaSObject, hash);
-        Activities activities = driveFileMapper.toActivityEntity(file, event_type, user, savedPath);
+        Activities activities = driveFileMapper.toActivityEntity(file, event_type, user, savedPath, tlsh);
         synchronized (this) {
             try {
 

@@ -55,7 +55,7 @@ public class DriveFileMapper {
     }
 
 
-    public Activities toActivityEntity(File file, String eventType, MonitoredUsers user, String channel) {
+    public Activities toActivityEntity(File file, String eventType, MonitoredUsers user, String channel, String tlsh) {
         if (file == null) {
             return null;
         }
@@ -87,6 +87,7 @@ public class DriveFileMapper {
                 .fileName(file.getName())
                 .eventTs(eventTs)  // eventTs가 null일 수 있음에 유의
                 .uploadChannel(uploadChannel)
+                .tlsh(tlsh)
                 .build();
     }
 
