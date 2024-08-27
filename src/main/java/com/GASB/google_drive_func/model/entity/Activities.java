@@ -35,9 +35,15 @@ public class Activities {
     @Column(name = "upload_channel", length = 100)
     private String uploadChannel;
 
+    @Column(name = "tlsh", columnDefinition = "TEXT", nullable = false)
+    private String tlsh;
+
     @Builder
-    public Activities(MonitoredUsers user, String eventType, String saasFileId, String fileName, LocalDateTime eventTs, String uploadChannel) {
+    public Activities(MonitoredUsers user, String eventType, String saasFileId,
+                      String fileName, LocalDateTime eventTs, String uploadChannel,
+                      String tlsh) {
         this.user = user;
+        this.tlsh = tlsh;
         this.eventType = eventType;
         this.saasFileId = saasFileId;
         this.fileName = fileName;
