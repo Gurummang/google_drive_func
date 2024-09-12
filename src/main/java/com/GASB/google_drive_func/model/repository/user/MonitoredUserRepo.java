@@ -26,7 +26,7 @@ public interface MonitoredUserRepo extends JpaRepository<MonitoredUsers, Long> {
     @Query(nativeQuery = true, value =
             "SELECT " +
                     "u.user_name AS userName, " +
-                    "COUNT(DISTINCT CASE WHEN dr.dlp = TRUE THEN fu.id END) AS sensitiveFilesCount, " +
+                    "COUNT(DISTINCT CASE WHEN dr.info_cnt >= 1 = TRUE THEN fu.id END) AS sensitiveFilesCount, " +
                     "COUNT(DISTINCT CASE WHEN vr.threat_label != 'none' THEN fu.id END) AS maliciousFilesCount, " +
                     "MAX(fu.upload_ts) AS lastUploadedTimestamp " +
                     "FROM " +
@@ -46,13 +46,13 @@ public interface MonitoredUserRepo extends JpaRepository<MonitoredUsers, Long> {
                     "WHERE " +
                     "    os.org_id = :orgId " +
                     "    AND os.saas_id = :saasId " +
-                    "    AND (vr.threat_label != 'none' OR dr.dlp = TRUE) " +
+                    "    AND (vr.threat_label != 'none' OR dr.infoCnt >= 1) " +
                     "GROUP BY " +
                     "    u.user_name " +
                     "HAVING " +
                     "    COUNT(DISTINCT CASE WHEN vr.threat_label != 'none' THEN fu.id END) > 0 " +
                     "ORDER BY " +
-                    "    (5 * COUNT(DISTINCT CASE WHEN vr.threat_label != 'none' THEN fu.id END) + COUNT(DISTINCT CASE WHEN dr.dlp = TRUE THEN fu.id END)) DESC " +
+                    "    (5 * COUNT(DISTINCT CASE WHEN vr.threat_label != 'none' THEN fu.id END) + COUNT(DISTINCT CASE WHEN dr.info_cnt >= 1 THEN fu.id END)) DESC " +
                     "LIMIT 5")
     List<Object[]> findTopUsers(@Param("orgId") int orgId, @Param("saasId") int saasId);
 }
