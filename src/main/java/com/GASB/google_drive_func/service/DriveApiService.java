@@ -1,38 +1,25 @@
 package com.GASB.google_drive_func.service;
 
-import com.GASB.google_drive_func.model.entity.MonitoredUsers;
-import com.GASB.google_drive_func.model.entity.OrgSaaS;
-import com.GASB.google_drive_func.model.mapper.DriveFileMapper;
 import com.GASB.google_drive_func.model.mapper.DriveUserMapper;
 import com.GASB.google_drive_func.model.repository.user.MonitoredUserRepo;
 import com.GASB.google_drive_func.model.repository.org.OrgSaaSRepo;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.FileList;
-import com.google.api.services.drive.model.Permission;
 import com.google.api.services.drive.model.PermissionList;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Objects;
 
 @Service
 @Slf4j
 public class DriveApiService {
 
     private final GoogleUtil googleUtil;
-    private final OrgSaaSRepo OrgSaaSRepo;
-    private final MonitoredUserRepo monitoredUserRepo;
-    private final DriveUserMapper DriveUserMapper;
     @Autowired
-    public DriveApiService(GoogleUtil googleUtil, OrgSaaSRepo OrgSaaSRepo
-            , MonitoredUserRepo MonitoredUsersRepo, DriveUserMapper DriveUserMapper) {
+    public DriveApiService(GoogleUtil googleUtil) {
         this.googleUtil = googleUtil;
-        this.OrgSaaSRepo = OrgSaaSRepo;
-        this.monitoredUserRepo = MonitoredUsersRepo;
-        this.DriveUserMapper = DriveUserMapper;
     }
 
 
@@ -65,4 +52,23 @@ public class DriveApiService {
             return null;
         }
     }
+
+    public boolean DriveFileDeleteApi(int id, String driveFileId) {
+        try {
+            // Google Drive 파일 삭제 API 호출
+            Drive service = googleUtil.getDriveService(id);
+            service.files().delete(driveFileId).execute(); // 파일 ID로 삭제 요청
+            return true; // 삭제 성공 시 true 반환
+
+        } catch (GoogleJsonResponseException e) {
+            // Google API 에러 처리
+            log.error("Google Drive API Error: " + e.getDetails().getMessage());
+            return false;
+        } catch (Exception e) {
+            // 네트워크/I/O 에러 처리
+            log.error("Error occurred: " + e.getMessage());
+            return false;
+        }
+    }
+
 }
