@@ -21,10 +21,15 @@ public class DlpReport {
     @JoinColumn(name = "file_id", nullable = false, referencedColumnName = "id")
     private StoredFile storedFile;
 
-    @Column(name="dlp")
-    private Boolean dlp;
+    @ManyToOne
+    @JoinColumn(name = "policy_id", nullable = false)
+    private Policy policy;
 
-    @Column(name = "result_data", columnDefinition = "TEXT")
-    private String resultData;
+    @ManyToOne
+    @JoinColumn(name = "pii_id", nullable = false)
+    private Pii pii;
+
+    @Column(name = "info_cnt")
+    private int infoCnt;
 
 }
