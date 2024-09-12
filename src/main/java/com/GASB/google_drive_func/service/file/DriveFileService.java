@@ -1,9 +1,6 @@
 package com.GASB.google_drive_func.service.file;
 
-import com.GASB.google_drive_func.model.dto.TopUserDTO;
-import com.GASB.google_drive_func.model.dto.file.DriveFileCountDto;
-import com.GASB.google_drive_func.model.dto.file.DirveFileSizeDto;
-import com.GASB.google_drive_func.model.dto.file.DriveRecentFileDTO;
+import com.GASB.google_drive_func.model.entity.FileUploadTable;
 import com.GASB.google_drive_func.model.entity.OrgSaaS;
 import com.GASB.google_drive_func.model.repository.files.FileUploadRepository;
 import com.GASB.google_drive_func.model.repository.files.StoredFileRepository;
@@ -17,16 +14,11 @@ import com.google.api.services.drive.model.File;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -53,6 +45,28 @@ public class DriveFileService {
         this.storedFilesRepository = storedFilesRepository;
         this.fileUploadRepository = fileUploadRepository;
         this.monitoredUserRepo = monitoredUserRepo;
+    }
+
+    public boolean fileDelete(int idx, String fileHash) {
+        try {
+            // 파일 ID와 해시값을 통해 파일 조회
+            FileUploadTable targetFile = fileUploadRepository.findByIdAndFileHash(idx, fileHash).orElse(null);
+            if (targetFile == null) {
+                log.error("File not found or invalid: id={}, hash={}", idx, fileHash);
+                return false;
+            }
+            // 해당 파일이 Slack 파일인지 확인
+            if (orgSaaSRepo.findSaaSIdById(targetFile.getOrgSaaS().getId()) != 6) {
+                log.error("File is not a Slack file: id={}, saasId={}", idx, targetFile.getOrgSaaS().getId());
+                return false;
+            }
+            // Slack API를 통해 파일 삭제 요청
+            return driveApiService.DriveFileDeleteApi(targetFile.getOrgSaaS().getId(), targetFile.getSaasFileId());
+
+        } catch (Exception e) {
+            log.error("Error processing file delete: id={}, hash={}", idx, fileHash, e);
+            return false;
+        }
     }
 
     @Transactional
