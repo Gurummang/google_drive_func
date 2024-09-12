@@ -26,4 +26,8 @@ public interface FileUploadRepository extends JpaRepository<FileUploadTable, Lon
     @Query("SELECT CASE WHEN COUNT(f) > 0 THEN true ELSE false END FROM FileUploadTable f WHERE f.saasFileId = :saasFileId AND f.timestamp = :timestamp")
     boolean existsBySaasFileIdAndTimestamp(@Param("saasFileId") String saasFileId, @Param("timestamp") LocalDateTime timestamp);
 
+    @Query("SELECT fu FROM FileUploadTable fu WHERE fu.hash = :file_hash AND fu.id = :idx")
+    Optional<FileUploadTable> findByIdAndFileHash(@Param("idx") int idx, @Param("file_hash")String file_hash);
+
+
 }
