@@ -1,7 +1,10 @@
 package com.GASB.google_drive_func.service.init;
 
 import com.GASB.google_drive_func.service.DriveUserService;
+import com.GASB.google_drive_func.service.GoogleUtil.GoogleDriveWebhookManager;
+import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
 import com.GASB.google_drive_func.service.file.DriveFileService;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -15,11 +18,13 @@ public class DriveInitService {
 
     private final DriveFileService driveFileService;
     private final DriveUserService driveUserService;
+    private final GoogleDriveWebhookManager googleDriveWebhookManager;
 
     @Autowired
-    public DriveInitService(DriveFileService driveFileService, DriveUserService driveUserService) {
+    public DriveInitService(DriveFileService driveFileService, DriveUserService driveUserService, GoogleDriveWebhookManager googleDriveWebhookManager) {
         this.driveFileService = driveFileService;
         this.driveUserService = driveUserService;
+        this.googleDriveWebhookManager = googleDriveWebhookManager;
     }
 
     @Async
@@ -42,17 +47,27 @@ public class DriveInitService {
                 });
     }
 
+    @Transactional
     public void fetchAndSaveAll(int workspaceId) {
         CompletableFuture<Void> usersFuture = fetchAndSaveUsers(workspaceId);
         CompletableFuture<Void> filesFuture = fetchAndSaveFiles(workspaceId);
 
-        // 두 비동기 작업이 모두 완료될 때까지 기다림
-        CompletableFuture.allOf(usersFuture, filesFuture)
-                .thenRun(() -> log.info("All data fetched and saved successfully"))
-                .exceptionally(e -> {
-                    log.error("Error fetching files or users: {}", e.getMessage(), e);
-                    return null;
-                })
-                .join(); // 비동기 작업을 동기적으로 완료되도록 기다림
+        // filesFuture이 끝난 이후 웹훅 설정 하도록 함
+        try {
+            filesFuture
+                    .thenCompose(v -> googleDriveWebhookManager.setWebhook(workspaceId))
+                    .thenRun(() -> log.info("Webhook set successfully"))
+                    .thenCombine(usersFuture, (f,u)-> {
+                        log.info("All data fetched and saved successfully");
+                        return null;
+                    })
+                    .exceptionally(e -> {
+                        log.error("Error fetching files, users, or setting webhook: {}", e.getMessage(), e);
+                        return null;
+                    })
+                    .join();
+        } catch (Exception e){
+            log.error("Error fetching files, users, or setting webhook: {}", e.getMessage(),e);
+        }
     }
 }
