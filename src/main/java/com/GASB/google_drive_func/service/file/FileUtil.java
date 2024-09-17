@@ -231,11 +231,6 @@ public class FileUtil {
 
                 if (!storedFilesRepository.existsBySaltedHash(storedFileObj.getSaltedHash())) {
                     storedFilesRepository.save(storedFileObj);
-                    try {
-                        messageSender.sendMessage(storedFileObj.getId());
-                    } catch (Exception e) {
-                        log.error("Error sending message to file_queue: {}", e.getMessage(), e);
-                    }
                     log.info("File uploaded successfully stored_file table: {}", file.getName());
                 } else {
                     log.warn("Duplicate file detected in StoredFile: {}", file.getName());
@@ -245,6 +240,7 @@ public class FileUtil {
                 if (!fileUploadRepository.existsBySaasFileIdAndTimestamp(fileUploadTableObj.getSaasFileId(), fileUploadTableObj.getTimestamp())) {
                     try {
                         fileUploadRepository.save(fileUploadTableObj);
+                        messageSender.sendMessage(fileUploadTableObj.getId());
                     } catch (Exception e) {
                         log.error("Error saving file_upload table: {}", e.getMessage(), e);
                     }
