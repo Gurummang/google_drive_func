@@ -25,7 +25,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -347,5 +349,23 @@ public class FileUtil {
     public Long getTotalDlpFileSize(int orgId, int saasId) {
         Long totalDlpFileSize = storedFilesRepository.getTotalDlpFileSize(orgId, saasId);
         return totalDlpFileSize != null ? totalDlpFileSize : 0L; // null 반환 방지
+    }
+
+    public void deleteFileInS3(String filePath) {
+        try {
+            // 삭제 요청 생성
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(filePath)
+                    .build();
+
+            // S3에서 파일 삭제
+            s3Client.deleteObject(deleteObjectRequest);
+            log.info("File deleted successfully from S3: " + filePath);
+
+        } catch (S3Exception e) {
+            // 예외 처리
+            log.info("Error deleting file from S3: " + e.awsErrorDetails().errorMessage());
+        }
     }
 }
