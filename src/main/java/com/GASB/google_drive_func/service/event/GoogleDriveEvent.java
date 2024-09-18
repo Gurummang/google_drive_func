@@ -18,7 +18,6 @@ import com.google.api.services.drive.model.File;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -30,14 +29,6 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class GoogleDriveEvent {
-
-//    public class GoogleDriveChangeEventDto {
-//        private String workspaceId;
-//        private String channelId;
-//        private String resourceId;
-//        private String resourceState;
-//        private String resourceUri;
-//    }
 
     private final int saas_id = 6;
 
@@ -52,87 +43,116 @@ public class GoogleDriveEvent {
     private final FileUploadRepository fileUploadRepository;
     private final MessageSender messageSender;
 
-
     private GoogleDriveEventObject createGoogleDriveEventObject(Map<String, Object> payload) throws Exception {
-        return GoogleDriveEventObject.fromPayload(
-                payload, workspaceConfigRepo, orgSaaSRepo, driveApiService, monitoredUserRepo, googleutil
-        );
+        try {
+            return GoogleDriveEventObject.fromPayload(
+                    payload, workspaceConfigRepo, orgSaaSRepo, driveApiService, monitoredUserRepo, googleutil
+            );
+        } catch (Exception e) {
+            log.error("Failed to create GoogleDriveEventObject from payload: {}", payload, e);
+            throw new RuntimeException("Error creating GoogleDriveEventObject", e);
+        }
     }
 
     public void handledCreateEvent(Map<String, Object> payload) throws Exception {
-        // GoogleDriveEventObject 객체를 payload로 생성
-        GoogleDriveEventObject googleDriveEventObject = createGoogleDriveEventObject(payload);
-
-        // 파일 처리 및 저장
-        fileUtil.processAndStoreFile(
-                googleDriveEventObject.getFile(),
-                googleDriveEventObject.getOrgSaaS(),
-                googleDriveEventObject.getWorkspaceId(),
-                "file_upload",
-                googleDriveEventObject.getDriveService()
-        );
+        try {
+            GoogleDriveEventObject googleDriveEventObject = createGoogleDriveEventObject(payload);
+            fileUtil.processAndStoreFile(
+                    googleDriveEventObject.getFile(),
+                    googleDriveEventObject.getOrgSaaS(),
+                    googleDriveEventObject.getWorkspaceId(),
+                    "file_upload",
+                    googleDriveEventObject.getDriveService()
+            );
+        } catch (Exception e) {
+            log.error("Error handling file creation event", e);
+            throw new RuntimeException("File creation event failed", e);
+        }
     }
 
-
     public void handledUpdateEvent(Map<String, Object> payload) throws Exception {
-        GoogleDriveEventObject googleDriveEventObject = createGoogleDriveEventObject(payload);
-        fileUtil.processAndStoreFile(
-                googleDriveEventObject.getFile(),
-                googleDriveEventObject.getOrgSaaS(),
-                googleDriveEventObject.getWorkspaceId(),
-                "file_change",
-                googleDriveEventObject.getDriveService()
-        );
+        try {
+            GoogleDriveEventObject googleDriveEventObject = createGoogleDriveEventObject(payload);
+            fileUtil.processAndStoreFile(
+                    googleDriveEventObject.getFile(),
+                    googleDriveEventObject.getOrgSaaS(),
+                    googleDriveEventObject.getWorkspaceId(),
+                    "file_change",
+                    googleDriveEventObject.getDriveService()
+            );
+        } catch (Exception e) {
+            log.error("Error handling file update event", e);
+            throw new RuntimeException("File update event failed", e);
+        }
     }
 
     @Transactional
     public void handledDeleteEvent(Map<String, Object> payload) throws Exception {
-        GoogleDriveEventObject googleDriveEventObject = createGoogleDriveEventObject(payload);
+        GoogleDriveEventObject googleDriveEventObject;
+        try {
+            googleDriveEventObject = createGoogleDriveEventObject(payload);
+        } catch (Exception e) {
+            log.error("Failed to create GoogleDriveEventObject for delete event", e);
+            throw new RuntimeException("Failed to handle delete event", e);
+        }
 
-        long timestamp = Instant.now().getEpochSecond();
-        String file_id = googleDriveEventObject.getFile().getId();
-        Activities activities = copyForDelete(file_id, timestamp);
-        String file_hash = fileUploadRepository.findFileHashByFileId(file_id).orElse(null);
-        String s3Path = storedFileRepository.findSavePathByHash(file_hash).orElse(null);
-        fileActivityRepo.save(activities);
+        try {
+            long timestamp = Instant.now().getEpochSecond();
+            String file_id = googleDriveEventObject.getFile().getId();
+            Activities activities = copyForDelete(file_id, timestamp);
+            String file_hash = fileUploadRepository.findFileHashByFileId(file_id).orElse(null);
+            String s3Path = storedFileRepository.findSavePathByHash(file_hash).orElse(null);
 
-        fileUtil.deleteFileInS3(s3Path);
-        // 2. file_upload 테이블에서 deleted 컬럼을 true로 변경
-        fileUploadRepository.checkDelete(file_id);
-        messageSender.sendGroupingMessage(activities.getId());
+            if (s3Path == null) {
+                log.error("Failed to find S3 path for file: {}", file_id);
+                throw new IllegalStateException("No S3 path found for file: " + file_id);
+            }
 
+            fileActivityRepo.save(activities);
+            fileUtil.deleteFileInS3(s3Path);
+
+            // file_upload 테이블에서 deleted 컬럼을 true로 변경
+            fileUploadRepository.checkDelete(file_id);
+
+            // 메시지 전송
+            messageSender.sendGroupingMessage(activities.getId());
+        } catch (Exception e) {
+            log.error("Error handling file delete event", e);
+            throw new RuntimeException("File delete event failed", e);
+        }
     }
 
+    private Activities copyForDelete(String file_id, long timestamp) {
+        try {
+            Activities activities = fileActivityRepo.findRecentBySaasFileId(file_id).orElse(null);
 
-    private Activities copyForDelete(String file_id, long timestamp){
-        // 최근 활동 정보를 찾음, 없으면 null
-        Activities activities = fileActivityRepo.findRecentBySaasFileId(file_id).orElse(null);
+            if (activities == null) {
+                log.warn("No recent activities found for file_id: {}", file_id);
+                throw new IllegalStateException("No recent activity found for file: " + file_id);
+            }
 
-        // activities가 null일 경우 예외 처리 또는 기본값 처리
-        if (activities == null) {
-            log.warn("No recent activities found for file_id: {}", file_id);
-            throw new IllegalStateException("No recent activity found for file: " + file_id);
+            ZoneId zoneId = ZoneId.of("Asia/Seoul");
+            LocalDateTime adjustedTimestamp;
+
+            if (timestamp > 0) {
+                adjustedTimestamp = LocalDateTime.ofInstant(Instant.ofEpochSecond(timestamp), zoneId);
+            } else {
+                adjustedTimestamp = LocalDateTime.now(zoneId);
+            }
+
+            return Activities.builder()
+                    .user(activities.getUser())
+                    .eventType("file_delete")
+                    .saasFileId(file_id)
+                    .fileName(activities.getFileName())
+                    .eventTs(adjustedTimestamp)
+                    .uploadChannel(activities.getUploadChannel())
+                    .tlsh(activities.getTlsh())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error creating copy for delete event", e);
+            throw new RuntimeException("Failed to create delete event", e);
         }
-
-        // 시간대를 서울로 고정하여 처리
-        ZoneId zoneId = ZoneId.of("Asia/Seoul");
-
-        // timestamp가 0일 경우, 현재 시간을 사용할 수 있도록 처리
-        LocalDateTime adjustedTimestamp;
-        if (timestamp > 0) {
-            adjustedTimestamp = LocalDateTime.ofInstant(Instant.ofEpochSecond(timestamp), zoneId);
-        } else {
-            adjustedTimestamp = LocalDateTime.now(zoneId);
-        }
-
-        return Activities.builder()
-                .user(activities.getUser()) // null이 아닌지 확인 후 처리
-                .eventType("file_delete")
-                .saasFileId(file_id)
-                .fileName(activities.getFileName())
-                .eventTs(adjustedTimestamp)
-                .uploadChannel(activities.getUploadChannel())
-                .tlsh(activities.getTlsh())
-                .build();
     }
 }
