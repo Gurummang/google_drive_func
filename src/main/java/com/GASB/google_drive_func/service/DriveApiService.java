@@ -6,11 +6,14 @@ import com.GASB.google_drive_func.model.repository.org.OrgSaaSRepo;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.PermissionList;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
 
 @Service
 @Slf4j
@@ -37,6 +40,26 @@ public class DriveApiService {
         } catch (Exception e) {
             log.error("An error occurred while listing files: {}", e.getMessage(), e);
             return null;
+        }
+    }
+
+    public File fetchOneFile(String fileId, int workspaceId, Drive service) throws Exception {
+
+        try {
+            return service.files().get(fileId)
+                    .setSupportsAllDrives(true)
+                    .setFields("id, name, mimeType, size, createdTime, modifiedTime, parents, webViewLink, iconLink, thumbnailLink, permissions(id, type, emailAddress, role), lastModifyingUser(displayName, emailAddress)")
+                    .execute();
+        } catch (GoogleJsonResponseException e) {
+            if (e.getStatusCode() == 404) {
+                log.warn("File not found: {}", fileId);
+                return null;
+            }
+            log.error("Error fetching file {}: {}", fileId, e.getMessage());
+            throw e;
+        } catch (IOException e) {
+            log.error("IO error while fetching file {}: {}", fileId, e.getMessage());
+            throw e;
         }
     }
 
@@ -70,5 +93,6 @@ public class DriveApiService {
             return false;
         }
     }
+
 
 }
