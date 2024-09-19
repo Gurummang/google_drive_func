@@ -15,9 +15,16 @@ public interface WorkspaceConfigRepo extends JpaRepository<WorkspaceConfig, Stri
     @Query("select w from WorkspaceConfig w where w.id = :id")
     Optional<WorkspaceConfig> findById(@Param("id") int id);
 
+    @Query("select w.webhook from WorkspaceConfig w where w.id = :id")
+    Optional<String> getWebHookUrl(@Param("id")int id);
+
     // Update Token
     @Modifying
     @Transactional
     @Query("update WorkspaceConfig w set w.token = :token where w.id = :id")
     void updateToken(@Param("id") int id,@Param("token") String token);
+
+    @Query("SELECT w.id FROM WorkspaceConfig w WHERE w.webhook = :webhook")
+    Optional<Integer> getWorkspaceConfigId(@Param("webhook") String webhook);
+
 }

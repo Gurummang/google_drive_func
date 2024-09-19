@@ -55,4 +55,7 @@ public interface MonitoredUserRepo extends JpaRepository<MonitoredUsers, Long> {
                     "    (5 * COUNT(DISTINCT CASE WHEN vr.threat_label != 'none' THEN fu.id END) + COUNT(DISTINCT CASE WHEN dr.info_cnt >= 1 THEN fu.id END)) DESC " +
                     "LIMIT 5")
     List<Object[]> findTopUsers(@Param("orgId") int orgId, @Param("saasId") int saasId);
+
+    @Query("SELECT u FROM MonitoredUsers u WHERE u.email = :email")
+    Optional<MonitoredUsers> findByEmail(@Param("email") String email);
 }
