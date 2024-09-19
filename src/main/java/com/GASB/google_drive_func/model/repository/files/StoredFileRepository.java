@@ -13,6 +13,9 @@ public interface StoredFileRepository extends JpaRepository<StoredFile, Long> {
     Optional<StoredFile> findBySaltedHash(String saltedHash);
 
 
+    @Query("SELECT st.savePath FROM StoredFile st WHERE st.saltedHash = :hash")
+    Optional<String> findSavePathByHash(@Param("hash") String hash);
+
     boolean existsBySaltedHash(String saltedHash);
 
     @Query("SELECT SUM(sf.size) FROM Org o " +

@@ -2,26 +2,19 @@ package com.GASB.google_drive_func.service.GoogleUtil;
 
 import com.GASB.google_drive_func.model.entity.WorkspaceConfig;
 import com.GASB.google_drive_func.model.repository.org.WorkspaceConfigRepo;
+import com.GASB.google_drive_func.model.repository.user.MonitoredUserRepo;
 import com.GASB.google_drive_func.service.AESUtil;
 import com.google.api.client.auth.oauth2.BearerToken;
 import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.auth.oauth2.TokenResponse;
-import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
-import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
-import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.util.Objects;
 
 @Service
 @Slf4j
@@ -30,12 +23,10 @@ public class GoogleUtil {
     private static final String APPLICATION_NAME = "grummang-google-dirve-func";
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private final WorkspaceConfigRepo workspaceConfigRepo;
-    private final AESUtil aesUtil;
 
     @Autowired
-    public GoogleUtil(WorkspaceConfigRepo workspaceConfigRepo, AESUtil aesUtil) {
+    public GoogleUtil(WorkspaceConfigRepo workspaceConfigRepo) {
         this.workspaceConfigRepo = workspaceConfigRepo;
-        this.aesUtil = aesUtil;
     }
 
     @Value("${aes.key}")
