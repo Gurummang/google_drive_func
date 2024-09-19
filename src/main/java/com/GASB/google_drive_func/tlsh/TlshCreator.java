@@ -419,7 +419,7 @@ public class TlshCreator {
 	 * @see #getHash(boolean)
 	 */
 	public Tlsh getHash() {
-		return getHash(false);
+		return getHash(true);
 	}
 
 	/**
