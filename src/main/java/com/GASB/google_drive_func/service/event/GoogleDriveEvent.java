@@ -43,6 +43,7 @@ public class GoogleDriveEvent {
     private final FileUploadRepository fileUploadRepository;
     private final MessageSender messageSender;
 
+    // 사용자 조회, Org SaaS객체 생성, Drive API 서비스 객체 생성, 파일 정보 조회 등등..
     private GoogleDriveEventObject createGoogleDriveEventObject(Map<String, Object> payload) throws Exception {
         try {
             return GoogleDriveEventObject.fromPayload(
