@@ -107,9 +107,9 @@ public class GoogleDriveEvent {
         GoogleDriveEventObject googleDriveEventObject;
         try {
             googleDriveEventObject = createGoogleDriveEventObject(payload);
-        } catch (Exception e) {
-            log.error("Failed to create GoogleDriveEventObject for delete event", e);
-            throw new RuntimeException("Failed to handle delete event", e);
+        } catch (RuntimeException e){
+            log.error("Error handling file delete event", e);
+            throw new RuntimeException("Error handling file delete event");
         }
 
         try {

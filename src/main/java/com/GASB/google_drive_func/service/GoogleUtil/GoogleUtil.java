@@ -41,8 +41,11 @@ public class GoogleUtil {
             }
             return new Credential(BearerToken.authorizationHeaderAccessMethod())
                     .setAccessToken(AESUtil.decrypt(workspaceConfig.getToken(),key)); // 토큰을 반환
+        } catch (RuntimeException e) {
+            log.error("Error selecting token: {}", e.getMessage());
+            return null;
         } catch (Exception e) {
-            log.error("An error occurred while selecting the token: {}", e.getMessage(), e);
+            log.error("Error selecting token: {}", e.getMessage());
             return null;
         }
     }
@@ -96,8 +99,10 @@ public class GoogleUtil {
         try {
             String freshToken = AESUtil.encrypt(Token, key);
             workspaceConfigRepo.updateToken(workdpace_id, freshToken);
+        } catch (RuntimeException e) {
+            log.error("Error updating token: {}", e.getMessage());
         } catch (Exception e) {
-            log.error("An error occurred while updating the token: {}", e.getMessage(), e);
+            log.error("Error updating token: {}", e.getMessage());
         }
     }
 }
