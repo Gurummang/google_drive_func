@@ -130,7 +130,7 @@ public class DriveApiService {
                 .execute();
 
         // 파일이 삭제된 상태인지 확인
-        if (Boolean.TRUE.equals(change.getRemoved())) {
+        if (Boolean.TRUE.equals(change.getRemoved()) || Boolean.TRUE.equals(file.getTrashed()) || Boolean.TRUE.equals(file.getExplicitlyTrashed()) ){
             response.put("eventType","delete");
             response.put("fileId",fileId);
         }
@@ -162,7 +162,7 @@ public class DriveApiService {
 
     private String extractPageToken(String resource_uri) {
         try {
-            String[] uriParts = resource_uri.split("/");
+            String[] uriParts = resource_uri.split("=");
             return uriParts[uriParts.length - 1];
         } catch (ArrayIndexOutOfBoundsException e) {
             log.error("Error extracting page token: {}", e.getMessage());
