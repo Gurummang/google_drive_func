@@ -281,14 +281,22 @@ public class FileUtil {
                     log.warn("Duplicate file detected in StoredFile: {}", file.getName());
                 }
 
-                if (fileUploadTableObj.getSaasFileId() == null || fileUploadTableObj.getTimestamp() == null || fileUploadTableObj.getId() == null){
-                    log.error("fileUpload object data is null");
+                if (fileUploadTableObj.getSaasFileId() == null){
+                    log.error("Saas file id is null");
+                    return null;
+                }
+                if (fileUploadTableObj.getTimestamp() == null){
+                    log.error("Timestamp is null");
                     return null;
                 }
 
                 if (!fileUploadRepository.existsBySaasFileIdAndTimestamp(fileUploadTableObj.getSaasFileId(), fileUploadTableObj.getTimestamp())) {
                     try {
                         fileUploadRepository.save(fileUploadTableObj);
+                        if (fileUploadTableObj.getId() == null){
+                            log.error("FileUploadTable id is null");
+                            return null;
+                        }
                         messageSender.sendMessage(fileUploadTableObj.getId());
                     } catch (Exception e) {
                         log.error("Error saving file_upload table: {}", e.getMessage(), e);
@@ -297,13 +305,21 @@ public class FileUtil {
                 } else {
                     log.warn("Duplicate file detected in FileUploadTable: {}", file_name);
                 }
-                if (activities.getSaasFileId() == null || activities.getEventTs() == null || activities.getId() == null){
-                    log.error("Activities object data is null");
+                if (activities.getSaasFileId() == null){
+                    log.error("Saas file id is null");
+                    return null;
+                }
+                if (activities.getEventTs() == null){
+                    log.error("Event timestamp is null");
                     return null;
                 }
                 if (!activitiesRepository.existsBySaasFileIdAndEventTs(activities.getSaasFileId(), activities.getEventTs())) {
                     try {
                         activitiesRepository.save(activities);
+                        if (activities.getId() == null){
+                            log.error("Activities id is null");
+                            return null;
+                        }
                         log.info("Activity logged successfully activity table: {}", file_name);
                     } catch (Exception e) {
                         log.error("Error saving activities table: {}", e.getMessage(), e);
