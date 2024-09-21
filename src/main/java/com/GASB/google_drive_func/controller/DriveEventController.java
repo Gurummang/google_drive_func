@@ -22,7 +22,7 @@ public class DriveEventController {
     @PostMapping("/file-change")
     public ResponseEntity<String> handleFileChangedEvent(@RequestBody Map<String, Object> payload) throws Exception {
         log.info("File changed event received: {}", payload);
-        String eventType = payload.get("x-goog-resource-state").toString();
+        String eventType = payload.get("resourceState").toString();
         switch (eventType) {
             case "add" -> {
                 log.info("File create event received");
