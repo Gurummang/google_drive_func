@@ -146,56 +146,63 @@ public class DriveApiService {
         if (Boolean.TRUE.equals(changeFile.getTrashed())) {
             response.put("eventType","delete");
             response.put("fileId",fileId);
+            log.info("Response: {}", response);
+            return response;
         }
-
-        Instant currentTime = Instant.now();
-        if (isFileNewlyCreated(changeFile, currentTime)) {
-            response.put("eventType","create");
+        String eventType = isNewOrModified(changeFile);
+        if (eventType.equals(null)){
+            response.put("eventType","unknown");
             response.put("fileId",fileId);
+            log.info("Response: {}", response);
+            return response;
         }
-
-        if (isFileModified(changeFile)) {
-            response.put("eventType","update");
-            response.put("fileId",fileId);
-        }
+        response.put("eventType",eventType);
+        response.put("fileId",fileId);
         log.info("Response: {}", response);
         return response;
     }
 
     private String extractPageToken(String resource_uri) {
-        try {
-            String[] uriParts = resource_uri.split("=");
-            return uriParts[uriParts.length - 1];
-        } catch (ArrayIndexOutOfBoundsException e) {
-            log.error("Error extracting page token: {}", e.getMessage());
+        log.info("extractPageToken to {}", resource_uri);
+        if (resource_uri == null || resource_uri.isEmpty()) {
+            log.error("Resource URI is null or empty.");
             return null;
         }
-    }
-    // 파일이 삭제된 상태인지 확인하는 메서드
-    public boolean isFileDeleted(File file) {
-        return Boolean.TRUE.equals(file.getTrashed()) || Boolean.TRUE.equals(file.getExplicitlyTrashed());
-    }
 
-    // 파일이 새로 생성되었는지 확인하는 메서드
-    public boolean isFileNewlyCreated(File file, Instant currentTime) {
-        try {
-            // 파일의 생성 시간과 현재 시간을 비교
-            Instant createdTime = Instant.ofEpochMilli(file.getCreatedTime().getValue());
-            return createdTime.isAfter(currentTime.minusSeconds(60)); // 파일 생성 시간이 1분 내에 발생했는지 확인
-        } catch (NullPointerException e) {
-            // 파일 생성 시간이 null일 경우 false 반환
-            return false;
+        String[] uriParts = resource_uri.split("=");
+        if (uriParts.length < 2) {
+            log.error("Invalid resource URI format: {}", resource_uri);
+            return null;
         }
+
+        return uriParts[uriParts.length - 1];
     }
 
-    // 파일이 수정되었는지 확인하는 메서드
-    public boolean isFileModified(File file) {
+    private String isNewOrModified(File file) {
+        if (file == null) {
+            log.error("File is null.");
+            return "unknown"; // 파일이 null인 경우
+        }
+
         try {
+            Instant createdTime = Instant.ofEpochMilli(file.getCreatedTime().getValue());
             Instant modifiedTime = Instant.ofEpochMilli(file.getModifiedTime().getValue());
-            return modifiedTime != null; // 수정된 시각이 null이 아닌 경우 true
+
+            if (modifiedTime == null) {
+                log.warn("Modified time is null for file: {}", file.getId());
+                return "new"; // 수정 시간이 없는 경우 새로 생성된 것으로 간주
+            }
+
+            if (createdTime.isAfter(modifiedTime)) {
+                log.info("File is new: {}", file.getId());
+                return "new";
+            } else {
+                log.info("File is modified: {}", file.getId());
+                return "modified";
+            }
         } catch (NullPointerException e) {
-            // 수정 시간이 null일 경우 false 반환
-            return false;
+            log.error("Error processing file: {}, message: {}", file != null ? file.getId() : "unknown", e.getMessage());
+            return "unknown"; // 예외 발생 시
         }
     }
 
