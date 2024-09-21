@@ -44,10 +44,10 @@ public class GoogleDriveEvent {
     private final MessageSender messageSender;
 
     // 사용자 조회, Org SaaS객체 생성, Drive API 서비스 객체 생성, 파일 정보 조회 등등..
-    private GoogleDriveEventObject createGoogleDriveEventObject(Map<String, Object> payload) throws Exception {
+    private GoogleDriveEventObject createGoogleDriveEventObject(Map<String, Object> payload, String file_id) throws Exception {
         try {
             return GoogleDriveEventObject.fromPayload(
-                    payload, workspaceConfigRepo, orgSaaSRepo, driveApiService, monitoredUserRepo, googleutil
+                    payload, workspaceConfigRepo, orgSaaSRepo, driveApiService, monitoredUserRepo, googleutil, file_id
             );
         } catch (IllegalArgumentException e) {
             log.error("Error creating GoogleDriveEventObject", e);
@@ -58,9 +58,9 @@ public class GoogleDriveEvent {
         }
     }
 
-    public void handledCreateEvent(Map<String, Object> payload) throws Exception {
+    public void handledCreateEvent(Map<String, Object> payload, String file_id) throws Exception {
         try {
-            GoogleDriveEventObject googleDriveEventObject = createGoogleDriveEventObject(payload);
+            GoogleDriveEventObject googleDriveEventObject = createGoogleDriveEventObject(payload,file_id);
             fileUtil.processAndStoreFile(
                     googleDriveEventObject.getFile(),
                     googleDriveEventObject.getOrgSaaS(),
@@ -80,9 +80,9 @@ public class GoogleDriveEvent {
         }
     }
 
-    public void handledUpdateEvent(Map<String, Object> payload) throws Exception {
+    public void handledUpdateEvent(Map<String, Object> payload, String file_id) throws Exception {
         try {
-            GoogleDriveEventObject googleDriveEventObject = createGoogleDriveEventObject(payload);
+            GoogleDriveEventObject googleDriveEventObject = createGoogleDriveEventObject(payload,file_id);
             fileUtil.processAndStoreFile(
                     googleDriveEventObject.getFile(),
                     googleDriveEventObject.getOrgSaaS(),
@@ -103,10 +103,10 @@ public class GoogleDriveEvent {
     }
 
     @Transactional
-    public void handledDeleteEvent(Map<String, Object> payload) throws Exception {
+    public void handledDeleteEvent(Map<String, Object> payload, String fileId) throws Exception {
         GoogleDriveEventObject googleDriveEventObject;
         try {
-            googleDriveEventObject = createGoogleDriveEventObject(payload);
+            googleDriveEventObject = createGoogleDriveEventObject(payload,fileId);
         } catch (RuntimeException e){
             log.error("Error handling file delete event", e);
             throw new RuntimeException("Error handling file delete event");

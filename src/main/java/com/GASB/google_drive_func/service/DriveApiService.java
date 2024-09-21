@@ -4,6 +4,7 @@ import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.*;
+import com.rometools.utils.IO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,7 +13,9 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -102,30 +105,70 @@ public class DriveApiService {
         }
     }
         // 단일 파일의 변경 상태 조회
-    public String getFileDetails(String fileId, Drive service) throws IOException {
-        // 파일 ID를 사용해 Google Drive API로 파일 정보 조회
+
+
+    public Map<String,String> getFileDetails(Drive service, String resource_uri) throws IOException {
+        Map<String,String> response = new HashMap<>();
+        // 페이지 토큰 추출
+        String PageToken = extractPageToken(resource_uri);
+
+        // 파일 변경 이벤트 조회
+        ChangeList changeList = service.changes().list(PageToken)
+                .setPageSize(1)
+                .setFields("changes(fileId,removed,file(id,name,trashed,createdTime,modifiedTime,mimeType)),newStartPageToken")
+                .execute();
+
+        if (changeList.getChanges().isEmpty()) {
+            return null;
+        }
+
+        Change change = changeList.getChanges().get(0);
+        String fileId = change.getFileId();
+
         File file = service.files().get(fileId)
                 .setFields("id, name, trashed, explicitlyTrashed, createdTime, modifiedTime, mimeType")
                 .execute();
 
         // 파일이 삭제된 상태인지 확인
-        if (isFileDeleted(file)) {
-            return "delete";
+        if (Boolean.TRUE.equals(change.getRemoved())) {
+            response.put("eventType","delete");
+            response.put("fileId",fileId);
         }
 
         // 파일이 새로 생성된 상태인지 확인 (현재 시각과 비교)
-        Instant currentTime = Instant.now(); // 현재 시각
-        if (isFileNewlyCreated(file, currentTime)) {
-            return "create";
+        File changeFile = change.getFile();
+        if (changeFile == null) {
+            return null;
         }
 
-        // 파일이 수정된 상태인지 확인 (modifiedTime 필드를 사용)
-        if (isFileModified(file)) {
-            return "modify";
+        if (Boolean.TRUE.equals(changeFile.getTrashed())) {
+            response.put("eventType","delete");
+            response.put("fileId",fileId);
         }
-        return "unknown";
+
+        Instant currentTime = Instant.now();
+        if (isFileNewlyCreated(changeFile, currentTime)) {
+            response.put("eventType","create");
+            response.put("fileId",fileId);
+        }
+
+        if (isFileModified(changeFile)) {
+            response.put("eventType","update");
+            response.put("fileId",fileId);
+        }
+
+        return response;
     }
 
+    private String extractPageToken(String resource_uri) {
+        try {
+            String[] uriParts = resource_uri.split("/");
+            return uriParts[uriParts.length - 1];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            log.error("Error extracting page token: {}", e.getMessage());
+            return null;
+        }
+    }
     // 파일이 삭제된 상태인지 확인하는 메서드
     public boolean isFileDeleted(File file) {
         return Boolean.TRUE.equals(file.getTrashed()) || Boolean.TRUE.equals(file.getExplicitlyTrashed());

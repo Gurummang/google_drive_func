@@ -31,21 +31,25 @@ public class DriveEventController {
         log.info("File changed event received: {}", payload);
 
         int workspaceId = Integer.parseInt(payload.get("workspaceId").toString());
-        String file_id = payload.get("resourceId").toString();
+
         Drive service = googleUtil.getDriveService(workspaceId);
-        String eventType = driveApiService.getFileDetails(file_id, service);
-        switch (eventType) {
+        String resource_id = payload.get("resourceUri").toString();
+        Map<String,String> eventType = driveApiService.getFileDetails(service,resource_id);
+        String file_id = eventType.get("fileId");
+
+
+        switch (eventType.get("eventType")) {
             case "create" -> {
                 log.info("File create event received");
-                googleDriveEvent.handledCreateEvent(payload);
+                googleDriveEvent.handledCreateEvent(payload,file_id);
             }
-            case "modify" -> {
+            case "update" -> {
                 log.info("File update event received");
-                googleDriveEvent.handledUpdateEvent(payload);
+                googleDriveEvent.handledUpdateEvent(payload,file_id);
             }
             case "delete" -> {
                 log.info("File delete event received");
-                googleDriveEvent.handledDeleteEvent(payload);
+                googleDriveEvent.handledDeleteEvent(payload,file_id);
             }
             default -> log.info("Unknown event received");
         }

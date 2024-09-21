@@ -30,7 +30,7 @@ public class GoogleDriveEventObject {
     // 정적 팩토리 메서드로 payload를 처리하는 생성 방식 추가
     public static GoogleDriveEventObject fromPayload(Map<String, Object> payload, WorkspaceConfigRepo workspaceConfigRepo,
                                                      OrgSaaSRepo orgSaaSRepo, DriveApiService driveApiService,
-                                                     MonitoredUserRepo monitoredUserRepo, GoogleUtil googleUtil) throws Exception {
+                                                     MonitoredUserRepo monitoredUserRepo, GoogleUtil googleUtil, String file_id) throws Exception {
         // workspaceId 추출 및 OrgSaaS 조회
         int workspaceId = workspaceConfigRepo.getWorkspaceConfigId(payload.get("workspaceId").toString()).orElse(null);
         OrgSaaS orgSaasObj = orgSaaSRepo.findById(workspaceId).orElse(null);
@@ -39,7 +39,7 @@ public class GoogleDriveEventObject {
         Drive service = googleUtil.getDriveService(workspaceId);
 
         // 파일 및 마지막 수정자 정보 조회
-        File file = driveApiService.fetchOneFile(payload.get("resourceId").toString(), workspaceId, service);
+        File file = driveApiService.fetchOneFile(file_id, workspaceId, service);
         String lastModifiedUser = file.getLastModifyingUser().getEmailAddress();
         MonitoredUsers monitoredUser = monitoredUserRepo.findByEmail(lastModifiedUser).orElse(null);
 
