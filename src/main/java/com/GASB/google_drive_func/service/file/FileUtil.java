@@ -110,17 +110,24 @@ public class FileUtil {
     }
 
     public String calculateHash(byte[] fileData) throws NoSuchAlgorithmException {
+        // 널 체크
+        if (fileData == null) {
+            throw new IllegalArgumentException("fileData cannot be null");
+        }
+
         MessageDigest digest = MessageDigest.getInstance(HASH_ALGORITHM);
         byte[] hash = digest.digest(fileData);
+
         return bytesToHex(hash);
     }
 
 
     //TLSH 해시 계산
-    private Tlsh computeTlsHash(byte[] fileData) throws IOException {
-        if (fileData == null) {
-            throw new IllegalArgumentException("fileData cannot be null");
+    private Tlsh computeTlsHash(byte[] fileData) {
+        if (fileData == null || fileData.length == 0) {
+            throw new IllegalArgumentException("fileData cannot be null or empty");
         }
+
         final int BUFFER_SIZE = 4096;
         TlshCreator tlshCreator = new TlshCreator();
 
@@ -128,13 +135,25 @@ public class FileUtil {
             byte[] buf = new byte[BUFFER_SIZE];
             int bytesRead;
             while ((bytesRead = is.read(buf)) != -1) {
+                // buf 자체의 null 체크는 불필요, 내부적으로 초기화된 배열
                 tlshCreator.update(buf, 0, bytesRead);
             }
         } catch (IOException e) {
-            throw new IOException("Error computing TLSH hash", e);
+            log.error("Error reading file data for TLSH hash calculation", e);
+            return null; // TLSH 계산 실패 시 null 반환
         }
 
-        return tlshCreator.getHash();
+        try {
+            Tlsh hash = tlshCreator.getHash();
+            if (hash == null) {
+                log.warn("TLSH hash is null, calculation may have failed");
+                return null;
+            }
+            return hash;
+        } catch (IllegalStateException e) {
+            log.warn("TLSH not valid; either not enough data or data has too little variance");
+            return null; // TLSH 계산 실패 시 null 반환
+        }
     }
 
     @Async("threadPoolTaskExecutor")
@@ -225,12 +244,36 @@ public class FileUtil {
 
 
         MonitoredUsers user = monitoredUserRepo.fineByUserId(file.getLastModifyingUser().getPermissionId(),workspaceId).orElse(null);
+        if (user == null){
+            log.error("User not found in MonitoredUsers: {}", file.getLastModifyingUser().getPermissionId());
+            return null;
+        }
         StoredFile storedFileObj = driveFileMapper.toStoredFileEntity(file, hash, savedPath);
+        if (storedFileObj == null){
+            log.error("StoredFile object is null");
+            return null;
+        }
         FileUploadTable fileUploadTableObj = driveFileMapper.toFileUploadEntity(file, orgSaaSObject, hash);
+        if (fileUploadTableObj == null){
+            log.error("FileUploadTable object is null");
+            return null;
+        }
         Activities activities = driveFileMapper.toActivityEntity(file, event_type, user, savedPath, tlsh);
+        if (activities == null){
+            log.error("Activities object is null");
+            return null;
+        }
         synchronized (this) {
             try {
-
+                String file_name = file.getName();
+                if (file_name == null){
+                    log.error("File name is null");
+                    return null;
+                }
+                if(storedFileObj.getSaltedHash() == null){
+                    log.error("Salted hash is null");
+                    return null;
+                }
                 if (!storedFilesRepository.existsBySaltedHash(storedFileObj.getSaltedHash())) {
                     storedFilesRepository.save(storedFileObj);
                     log.info("File uploaded successfully stored_file table: {}", file.getName());
@@ -238,6 +281,10 @@ public class FileUtil {
                     log.warn("Duplicate file detected in StoredFile: {}", file.getName());
                 }
 
+                if (fileUploadTableObj.getSaasFileId() == null || fileUploadTableObj.getTimestamp() == null || fileUploadTableObj.getId() == null){
+                    log.error("fileUpload object data is null");
+                    return null;
+                }
 
                 if (!fileUploadRepository.existsBySaasFileIdAndTimestamp(fileUploadTableObj.getSaasFileId(), fileUploadTableObj.getTimestamp())) {
                     try {
@@ -246,14 +293,18 @@ public class FileUtil {
                     } catch (Exception e) {
                         log.error("Error saving file_upload table: {}", e.getMessage(), e);
                     }
-                    log.info("File uploaded successfully in file_upload table: {}", file.getName());
+                    log.info("File uploaded successfully in file_upload table: {}", file_name);
                 } else {
-                    log.warn("Duplicate file detected in FileUploadTable: {}", file.getName());
+                    log.warn("Duplicate file detected in FileUploadTable: {}", file_name);
+                }
+                if (activities.getSaasFileId() == null || activities.getEventTs() == null || activities.getId() == null){
+                    log.error("Activities object data is null");
+                    return null;
                 }
                 if (!activitiesRepository.existsBySaasFileIdAndEventTs(activities.getSaasFileId(), activities.getEventTs())) {
                     try {
                         activitiesRepository.save(activities);
-                        log.info("Activity logged successfully activity table: {}", file.getName());
+                        log.info("Activity logged successfully activity table: {}", file_name);
                     } catch (Exception e) {
                         log.error("Error saving activities table: {}", e.getMessage(), e);
                     }
@@ -263,11 +314,15 @@ public class FileUtil {
                         log.error("Error sending message to grouping_queue: {}", e.getMessage(), e);
                     }
                 } else {
-                    log.warn("Duplicate activity detected in Activities Table: {}", file.getName());
+                    log.warn("Duplicate activity detected in Activities Table: {}", file_name);
                 }
             } catch (Exception e) {
                 log.error("Error while converting and saving entities: {}", e.getMessage(), e);
             }
+        }
+        if (file.getMimeType() == null || file.getFileExtension() == null){
+            log.error("Mime type or file extension is null");
+            return null;
         }
         scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
         uploadFileToS3(filePath, savedPath);

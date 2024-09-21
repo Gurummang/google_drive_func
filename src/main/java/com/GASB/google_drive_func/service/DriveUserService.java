@@ -58,8 +58,10 @@ public class DriveUserService {
                         }
                     }
                 }
+            } catch (IllegalArgumentException e) {
+                log.error("Error fetching users: {}", e.getMessage());
             } catch (Exception e) {
-                log.error("An error occurred while fetching users: {}", e.getMessage(), e);
+                log.error("Error fetching users: {}", e.getMessage());
             }
         });
     }
