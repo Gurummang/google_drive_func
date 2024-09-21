@@ -46,7 +46,7 @@ public interface MonitoredUserRepo extends JpaRepository<MonitoredUsers, Long> {
                     "WHERE " +
                     "    os.org_id = :orgId " +
                     "    AND os.saas_id = :saasId " +
-                    "    AND (vr.threat_label != 'none' OR dr.infoCnt >= 1) " +
+                    "    AND (vr.threat_label != 'none' OR dr.info_cnt >= 1) " +
                     "GROUP BY " +
                     "    u.user_name " +
                     "HAVING " +
