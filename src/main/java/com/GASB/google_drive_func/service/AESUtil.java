@@ -33,6 +33,12 @@ public class AESUtil {
             cipher.init(Cipher.ENCRYPT_MODE, secretKey);
             byte[] encryptedBytes = cipher.doFinal(plainText.getBytes());
             return Base64.getEncoder().encodeToString(encryptedBytes);
+        } catch (IllegalArgumentException e) {
+            log.info("Encrypt Failure: " + e.getMessage());
+            return null;
+        } catch (NullPointerException e) {
+            log.info("Encrypt Failure: " + e.getMessage());
+            return null;
         } catch (Exception e) {
             log.info("Encrypt Failure: " + e.getMessage());
             return null;
@@ -49,6 +55,12 @@ public class AESUtil {
             byte[] decodedBytes = Base64.getDecoder().decode(encryptedText);
             byte[] decryptedBytes = cipher.doFinal(decodedBytes);
             return new String(decryptedBytes);
+        } catch (IllegalArgumentException e) {
+            log.info("Decrypt Failure: " + e.getMessage());
+            return null;
+        } catch (NullPointerException e) {
+            log.info("Decrypt Failure: " + e.getMessage());
+            return null;
         } catch (Exception e) {
             log.info("Decrypt Failure: " + e.getMessage());
             return null;

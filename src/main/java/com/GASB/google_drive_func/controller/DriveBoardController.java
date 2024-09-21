@@ -55,6 +55,10 @@ public class DriveBoardController {
             DirveFileSizeDto driveFileSizeDto = fileUtil.sumOfFileSize(orgId, 6);
 
             return ResponseEntity.ok(driveFileSizeDto);
+        } catch (IllegalArgumentException e) {
+            response.put("status", 500);
+            response.put("data", new DirveFileSizeDto(0, 0, 0));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         } catch (Exception e) {
             response.put("status", 500);
             response.put("data", new DirveFileSizeDto(0, 0, 0));
@@ -80,9 +84,15 @@ public class DriveBoardController {
             DriveFileCountDto driveFileCountDto = fileUtil.FileCountSum(orgId, 6);
 
             return ResponseEntity.ok(driveFileCountDto);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            log.error("IllegalArgumentException :: Error fetching file count: {}", e.getMessage());
             response.put("status", 500);
-            response.put("data", new DriveFileCountDto(0, 0, 0, 0));
+            response.put("message", "Error fetching file count");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        } catch (Exception e) {
+            log.error("Etc Exception :: Error fetching file count: {}", e.getMessage());
+            response.put("status", 500);
+            response.put("message", "Error fetching file count");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -104,9 +114,13 @@ public class DriveBoardController {
             List<DriveRecentFileDTO> recentFiles = fileUtil.DriveRecentFiles(orgId, Objects.requireNonNull(saasObject).getId().intValue());
 
             return ResponseEntity.ok(recentFiles);
+        } catch (IllegalArgumentException e) {
+            response.put("status", 500);
+            response.put("data", Collections.singletonList(new DriveRecentFileDTO("Error", "Error", "Error", LocalDateTime.now())));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         } catch (Exception e) {
             response.put("status", 500);
-            response.put("data", Collections.singletonList(new DriveRecentFileDTO("Error", "Server Error", "N/A", LocalDateTime.now())));
+            response.put("data", Collections.singletonList(new DriveRecentFileDTO("Error", "Error", "Error", LocalDateTime.now())));
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -129,7 +143,17 @@ public class DriveBoardController {
             List<TopUserDTO> topuser = future.get();
 
             return ResponseEntity.ok(topuser);
+        } catch (IllegalArgumentException e) {
+            response.put("status", 500);
+            response.put("data", Collections.singletonList(new TopUserDTO("Error", 0L, 0L, LocalDateTime.now())));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        } catch (NullPointerException e){
+            log.error("Error fetching user ranking in user-ranking api: {}", e.getMessage());
+            response.put("status", 500);
+            response.put("data", Collections.singletonList(new TopUserDTO("Error", 0L, 0L, LocalDateTime.now())));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         } catch (Exception e) {
+            log.error("Error fetching user ranking in user-ranking api: {}", e.getMessage());
             response.put("status", 500);
             response.put("data", Collections.singletonList(new TopUserDTO("Error", 0L, 0L, LocalDateTime.now())));
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -162,10 +186,16 @@ public class DriveBoardController {
             }
 
             return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e){
+            Map<String, String> response = new HashMap<>();
+            response.put("status","500");
+            response.put("message","file deleted failed");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         } catch (Exception e) {
-            // log.error("Error fetching recent files", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonList(new TopUserDTO("Error", 0L, 0L, LocalDateTime.now())));
+            Map<String, String> response = new HashMap<>();
+            response.put("status","500");
+            response.put("message","file deleted failed");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 

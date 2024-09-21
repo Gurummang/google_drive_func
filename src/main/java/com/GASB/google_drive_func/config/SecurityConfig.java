@@ -29,7 +29,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                .requestMatchers("/", "/?continue", "/login", "/oauth2/**", "/error**", "/api/v1/connect/google-drive/**", "/api/v1/board/google-drive/**").permitAll()
+                                .requestMatchers("/", "/?continue", "/login", "/oauth2/**",
+                                        "/error**", "/api/v1/connect/google-drive/**", "/api/v1/board/google-drive/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
@@ -38,8 +39,14 @@ public class SecurityConfig {
                 )
                 .exceptionHandling(exceptionHandling ->
                         exceptionHandling
-                                .authenticationEntryPoint((request, response, authException) ->
-                                        response.sendRedirect("/login"))
+                                // 로그인 페이지로 리다이렉트 대신 401 응답
+                                .authenticationEntryPoint((request, response, authException) -> {
+                                    if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+                                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                                    } else {
+                                        response.sendRedirect("/login");
+                                    }
+                                })
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
@@ -71,3 +78,4 @@ public class SecurityConfig {
         }
     }
 }
+

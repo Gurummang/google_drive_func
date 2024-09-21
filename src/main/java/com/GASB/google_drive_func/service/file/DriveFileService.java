@@ -63,8 +63,11 @@ public class DriveFileService {
             // Slack API를 통해 파일 삭제 요청
             return driveApiService.DriveFileDeleteApi(targetFile.getOrgSaaS().getId(), targetFile.getSaasFileId());
 
+        } catch (IllegalArgumentException | NullPointerException e) {
+            log.error("Error deleting file: {}", e.getMessage());
+            return false;
         } catch (Exception e) {
-            log.error("Error processing file delete: id={}, hash={}", idx, fileHash, e);
+            log.error("Error deleting file: {}", e.getMessage());
             return false;
         }
     }
@@ -91,8 +94,10 @@ public class DriveFileService {
 
                 CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
+            } catch (IllegalArgumentException e) {
+                log.error("Error fetching files: {}", e.getMessage());
             } catch (Exception e) {
-                log.error("Error processing files", e);
+                log.error("Error fetching files: {}", e.getMessage());
             }
         });
     }

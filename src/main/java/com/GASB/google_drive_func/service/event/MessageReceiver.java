@@ -21,8 +21,10 @@ public class MessageReceiver {
         try {
             log.info("Received message from queue: " + message);
             driveInitService.fetchAndSaveAll(message);
+        } catch (IllegalArgumentException e) {
+            log.error("Error receiving message: {}", e.getMessage());
         } catch (Exception e) {
-            log.error("An error occurred while processing the message: {}", e.getMessage(), e);
+            log.error("Error receiving message: {}", e.getMessage());
         }
     }
 }

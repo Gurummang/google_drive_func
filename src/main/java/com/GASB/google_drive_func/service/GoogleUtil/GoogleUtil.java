@@ -52,9 +52,15 @@ public class GoogleUtil {
             return new Drive.Builder(GoogleNetHttpTransport.newTrustedTransport(), JSON_FACTORY, selectToken(workspace_id))
                     .setApplicationName(APPLICATION_NAME)
                     .build();
+        } catch (IllegalArgumentException e) {
+            log.error("Error creating Drive service: {}", e.getMessage());
+            throw new IllegalArgumentException("Error creating Drive service");
+        } catch (NullPointerException e) {
+            log.error("Error creating Drive service: {}", e.getMessage());
+            throw new NullPointerException("Error creating Drive service");
         } catch (Exception e) {
-            log.error("An error occurred while creating the Drive service: {}", e.getMessage(), e);
-            throw e;
+            log.error("Error creating Drive service: {}", e.getMessage());
+            throw new Exception("Error creating Drive service");
         }
     }
 
