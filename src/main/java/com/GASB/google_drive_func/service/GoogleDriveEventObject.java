@@ -28,11 +28,10 @@ public class GoogleDriveEventObject {
     private final GoogleUtil googleUtil;
 
     // 정적 팩토리 메서드로 payload를 처리하는 생성 방식 추가
-    public static GoogleDriveEventObject fromPayload(Map<String, Object> payload, WorkspaceConfigRepo workspaceConfigRepo,
+    public static GoogleDriveEventObject fromPayload(int workspaceId, WorkspaceConfigRepo workspaceConfigRepo,
                                                      OrgSaaSRepo orgSaaSRepo, DriveApiService driveApiService,
                                                      MonitoredUserRepo monitoredUserRepo, GoogleUtil googleUtil, String file_id) throws Exception {
         // workspaceId 추출 및 OrgSaaS 조회
-        int workspaceId = workspaceConfigRepo.getWorkspaceConfigId(payload.get("workspaceId").toString()).orElse(null);
         OrgSaaS orgSaasObj = orgSaaSRepo.findById(workspaceId).orElse(null);
 
         // Drive API 서비스 객체 생성
