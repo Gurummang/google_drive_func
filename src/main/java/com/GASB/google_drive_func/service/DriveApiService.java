@@ -3,14 +3,16 @@ package com.GASB.google_drive_func.service;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.drive.Drive;
-import com.google.api.services.drive.model.File;
-import com.google.api.services.drive.model.FileList;
-import com.google.api.services.drive.model.PermissionList;
+import com.google.api.services.drive.model.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -99,6 +101,60 @@ public class DriveApiService {
             return false;
         }
     }
+        // 단일 파일의 변경 상태 조회
+    public String getFileDetails(String fileId, Drive service) throws IOException {
+        // 파일 ID를 사용해 Google Drive API로 파일 정보 조회
+        File file = service.files().get(fileId)
+                .setFields("id, name, trashed, explicitlyTrashed, createdTime, modifiedTime, mimeType")
+                .execute();
+
+        // 파일이 삭제된 상태인지 확인
+        if (isFileDeleted(file)) {
+            return "delete";
+        }
+
+        // 파일이 새로 생성된 상태인지 확인 (현재 시각과 비교)
+        Instant currentTime = Instant.now(); // 현재 시각
+        if (isFileNewlyCreated(file, currentTime)) {
+            return "create";
+        }
+
+        // 파일이 수정된 상태인지 확인 (modifiedTime 필드를 사용)
+        if (isFileModified(file)) {
+            return "modify";
+        }
+        return "unknown";
+    }
+
+    // 파일이 삭제된 상태인지 확인하는 메서드
+    public boolean isFileDeleted(File file) {
+        return Boolean.TRUE.equals(file.getTrashed()) || Boolean.TRUE.equals(file.getExplicitlyTrashed());
+    }
+
+    // 파일이 새로 생성되었는지 확인하는 메서드
+    public boolean isFileNewlyCreated(File file, Instant currentTime) {
+        try {
+            // 파일의 생성 시간과 현재 시간을 비교
+            Instant createdTime = Instant.ofEpochMilli(file.getCreatedTime().getValue());
+            return createdTime.isAfter(currentTime.minusSeconds(60)); // 파일 생성 시간이 1분 내에 발생했는지 확인
+        } catch (NullPointerException e) {
+            // 파일 생성 시간이 null일 경우 false 반환
+            return false;
+        }
+    }
+
+    // 파일이 수정되었는지 확인하는 메서드
+    public boolean isFileModified(File file) {
+        try {
+            Instant modifiedTime = Instant.ofEpochMilli(file.getModifiedTime().getValue());
+            return modifiedTime != null; // 수정된 시각이 null이 아닌 경우 true
+        } catch (NullPointerException e) {
+            // 수정 시간이 null일 경우 false 반환
+            return false;
+        }
+    }
+
+
 
 
 }
