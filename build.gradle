@@ -54,11 +54,11 @@ dependencies {
 	//json
 	implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
 
-	//spring security
-	implementation 'org.springframework.boot:spring-boot-starter-security'
-	implementation 'org.springframework.security:spring-security-oauth2-client'
-	implementation 'org.springframework.security:spring-security-oauth2-jose'
-	testImplementation 'org.springframework.security:spring-security-test'
+//	//spring security
+//	implementation 'org.springframework.boot:spring-boot-starter-security'
+//	implementation 'org.springframework.security:spring-security-oauth2-client'
+//	implementation 'org.springframework.security:spring-security-oauth2-jose'
+//	testImplementation 'org.springframework.security:spring-security-test'
 
 	//Apache Tika
 	implementation 'org.apache.tika:tika-core:2.9.2'
