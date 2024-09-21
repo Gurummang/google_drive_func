@@ -49,8 +49,11 @@ public class GoogleDriveEvent {
             return GoogleDriveEventObject.fromPayload(
                     payload, workspaceConfigRepo, orgSaaSRepo, driveApiService, monitoredUserRepo, googleutil
             );
+        } catch (IllegalArgumentException e) {
+            log.error("Error creating GoogleDriveEventObject", e);
+            throw new IllegalArgumentException("Error creating GoogleDriveEventObject");
         } catch (Exception e) {
-            log.error("Failed to create GoogleDriveEventObject from payload: {}", payload, e);
+            log.error("Error creating GoogleDriveEventObject", e);
             throw new RuntimeException("Error creating GoogleDriveEventObject", e);
         }
     }
@@ -65,9 +68,15 @@ public class GoogleDriveEvent {
                     "file_upload",
                     googleDriveEventObject.getDriveService()
             );
+        } catch (IllegalArgumentException e) {
+            log.error("Error handling file create event", e);
+            throw new IllegalArgumentException("Error handling file create event");
+        } catch (NullPointerException e){
+            log.error("Error handling file create event", e);
+            throw new NullPointerException("Error handling file create event");
         } catch (Exception e) {
-            log.error("Error handling file creation event", e);
-            throw new RuntimeException("File creation event failed", e);
+            log.error("Error handling file create event", e);
+            throw new RuntimeException("Error handling file create event", e);
         }
     }
 
@@ -81,9 +90,15 @@ public class GoogleDriveEvent {
                     "file_change",
                     googleDriveEventObject.getDriveService()
             );
+        } catch (IllegalArgumentException e) {
+            log.error("Error handling file update event", e);
+            throw new IllegalArgumentException("Error handling file update event");
+        } catch (NullPointerException e){
+            log.error("Error handling file update event", e);
+            throw new NullPointerException("Error handling file update event");
         } catch (Exception e) {
             log.error("Error handling file update event", e);
-            throw new RuntimeException("File update event failed", e);
+            throw new RuntimeException("Error handling file update event", e);
         }
     }
 
@@ -117,9 +132,12 @@ public class GoogleDriveEvent {
 
             // 메시지 전송
             messageSender.sendGroupingMessage(activities.getId());
+        } catch (IllegalArgumentException e) {
+            log.error("Error handling file delete event", e);
+            throw new IllegalArgumentException("Error handling file delete event");
         } catch (Exception e) {
             log.error("Error handling file delete event", e);
-            throw new RuntimeException("File delete event failed", e);
+            throw new RuntimeException("Error handling file delete event", e);
         }
     }
 
@@ -151,9 +169,12 @@ public class GoogleDriveEvent {
                     .tlsh(activities.getTlsh())
                     .build();
 
+        } catch (IllegalArgumentException e){
+            log.error("Error copying activity for delete: {}", e.getMessage());
+            throw new IllegalArgumentException("Error copying activity for delete");
         } catch (Exception e) {
-            log.error("Error creating copy for delete event", e);
-            throw new RuntimeException("Failed to create delete event", e);
+            log.error("Error copying activity for delete: {}", e.getMessage());
+            throw new RuntimeException("Error copying activity for delete", e);
         }
     }
 }

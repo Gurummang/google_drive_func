@@ -1,8 +1,5 @@
 package com.GASB.google_drive_func.service;
 
-import com.GASB.google_drive_func.model.mapper.DriveUserMapper;
-import com.GASB.google_drive_func.model.repository.user.MonitoredUserRepo;
-import com.GASB.google_drive_func.model.repository.org.OrgSaaSRepo;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.drive.Drive;
@@ -37,8 +34,11 @@ public class DriveApiService {
                     .setFields("files")
                     .execute();
             return result;
-        } catch (Exception e) {
-            log.error("An error occurred while listing files: {}", e.getMessage(), e);
+        } catch (NullPointerException e) {
+            log.error("Error fetching files: {}", e.getMessage());
+            return null;
+        } catch (IOException e) {
+            log.error("IO error while fetching files: {}", e.getMessage());
             return null;
         }
     }
@@ -70,8 +70,14 @@ public class DriveApiService {
                     .setUseDomainAdminAccess(true)
                     .setFields("permissions(id,emailAddress,displayName,role)")
                     .execute();
-        } catch (Exception e){
-            log.error("An error occurred while listing users: {}", e.getMessage(), e);
+        } catch (IOException e) {
+            log.error("Error fetching users: {}", e.getMessage());
+            return null;
+        } catch (NullPointerException e) {
+            log.error("Error fetching users: {}", e.getMessage());
+            return null;
+        } catch (Exception e) {
+            log.error("Error fetching users: {}", e.getMessage());
             return null;
         }
     }
