@@ -16,7 +16,7 @@ public class SecurityConfig {
         http    .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                .requestMatchers("/oauth2/**", "/login**", "/error**","/api/v1/connect/google-drive/**","/api/v1/board/google-drive/**").permitAll()
+                                .requestMatchers("/oauth2/**", "/login**", "/error**","/api/v1/connect/google-drive/**","/api/v1/board/google-drive/**","/api/v1/events**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2Login ->
