@@ -54,6 +54,10 @@ dependencies {
 	//json
 	implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
 
+	//hash
+	implementation 'com.nimbusds:oauth2-oidc-sdk:6.23'
+
+
 //	//spring security
 //	implementation 'org.springframework.boot:spring-boot-starter-security'
 //	implementation 'org.springframework.security:spring-security-oauth2-client'
