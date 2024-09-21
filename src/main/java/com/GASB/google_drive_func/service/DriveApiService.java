@@ -111,19 +111,21 @@ public class DriveApiService {
         Map<String,String> response = new HashMap<>();
         // 페이지 토큰 추출
         String PageToken = extractPageToken(resource_uri);
-
+        log.info("Page Token: {}", PageToken);
         // 파일 변경 이벤트 조회
         ChangeList changeList = service.changes().list(PageToken)
                 .setPageSize(1)
                 .setFields("changes(fileId,removed,file(id,name,trashed,createdTime,modifiedTime,mimeType)),newStartPageToken")
                 .execute();
-
+        log.info("ChangeList: {}", changeList);
         if (changeList.getChanges().isEmpty()) {
             return null;
         }
 
         Change change = changeList.getChanges().get(0);
+        log.info("Change: {}", change);
         String fileId = change.getFileId();
+        log.info("File ID: {}", fileId);
 
         File file = service.files().get(fileId)
                 .setFields("id, name, trashed, explicitlyTrashed, createdTime, modifiedTime, mimeType")
@@ -156,7 +158,7 @@ public class DriveApiService {
             response.put("eventType","update");
             response.put("fileId",fileId);
         }
-
+        log.info("Response: {}", response);
         return response;
     }
 
