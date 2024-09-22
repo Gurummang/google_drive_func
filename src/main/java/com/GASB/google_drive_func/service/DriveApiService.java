@@ -1,5 +1,6 @@
 package com.GASB.google_drive_func.service;
 
+import com.GASB.google_drive_func.model.repository.channel.GooglePageTokenRepo;
 import com.GASB.google_drive_func.model.repository.files.FileActivityRepo;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
@@ -28,10 +29,12 @@ public class DriveApiService {
 
     private final GoogleUtil googleUtil;
     private final FileActivityRepo fileActivityRepo;
+    private final GooglePageTokenRepo googlePageTokenRepo;
     @Autowired
-    public DriveApiService(GoogleUtil googleUtil, FileActivityRepo fileActivityRepo) {
+    public DriveApiService(GoogleUtil googleUtil, FileActivityRepo fileActivityRepo, GooglePageTokenRepo googlePageTokenRepo) {
         this.googleUtil = googleUtil;
         this.fileActivityRepo = fileActivityRepo;
+        this.googlePageTokenRepo = googlePageTokenRepo;
     }
 
 
@@ -114,14 +117,19 @@ public class DriveApiService {
         // 단일 파일의 변경 상태 조회
 
 
-    public List<Map<String,String>> getFileDetails(Drive service, String resource_uri) throws IOException {
+    public List<Map<String,String>> getFileDetails(Drive service, String channel_id) throws IOException {
 
         List<Map<String,String>> response_list = new ArrayList<>();
 
         // 페이지 토큰 추출
-        StartPageToken getPageToken = service.changes().getStartPageToken().execute();
-        String pageToken = getPageToken.getStartPageToken();
+        String pageToken = googlePageTokenRepo.getPageTokenByChannelId(channel_id).orElse(null);
+        if (pageToken == null) {
+            log.error("Page token not found for channel ID: {}", channel_id);
+            return null;
+        }
         log.info("Page Token: {}", pageToken);
+
+
         // 파일 변경 이벤트 조회
         ChangeList changeList = service.changes().list(pageToken).execute();
         log.info("ChangeList: {}", changeList);
@@ -148,6 +156,9 @@ public class DriveApiService {
             response_list.add(response);
 
         }
+        // 페이지 토큰 업데이트
+        String newToken = service.changes().getStartPageToken().execute().getStartPageToken();
+        googlePageTokenRepo.UpdatePageTokenByChannelId(channel_id, newToken);
 
         return response_list;
     }
