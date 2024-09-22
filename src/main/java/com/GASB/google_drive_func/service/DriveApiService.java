@@ -1,7 +1,9 @@
 package com.GASB.google_drive_func.service;
 
+import com.GASB.google_drive_func.model.repository.files.FileActivityRepo;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.util.DateTime;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.*;
 import com.rometools.utils.IO;
@@ -22,9 +24,11 @@ import java.util.Map;
 public class DriveApiService {
 
     private final GoogleUtil googleUtil;
+    private final FileActivityRepo fileActivityRepo;
     @Autowired
-    public DriveApiService(GoogleUtil googleUtil) {
+    public DriveApiService(GoogleUtil googleUtil, FileActivityRepo fileActivityRepo) {
         this.googleUtil = googleUtil;
+        this.fileActivityRepo = fileActivityRepo;
     }
 
 
@@ -107,8 +111,10 @@ public class DriveApiService {
         // 단일 파일의 변경 상태 조회
 
 
-    public Map<String,String> getFileDetails(Drive service, String resource_uri) throws IOException {
-        Map<String,String> response = new HashMap<>();
+    public List<Map<String,String>> getFileDetails(Drive service, String resource_uri) throws IOException {
+
+        List<Map<String,String>> response_list = new ArrayList<>();
+
         // 페이지 토큰 추출
         String PageToken = extractPageToken(resource_uri);
         log.info("Page Token: {}", PageToken);
@@ -122,44 +128,26 @@ public class DriveApiService {
             return null;
         }
 
-        Change change = changeList.getChanges().get(0);
-        log.info("Change: {}", change);
-        String fileId = change.getFileId();
-        log.info("File ID: {}", fileId);
+        for (Change change : changeList.getChanges()){
+            Map<String,String> response = new HashMap<>();
+            log.info("Change: {}", change);
+            if (isDuplicateLog(change)){
+                continue;
+            }
+            String event_Type = decideType(change);
+            String file_id = change.getFileId();
+            if (!event_Type.equals(null)){
+                response.put("eventType",event_Type);
+                response.put("fileId",file_id);
+            } else{
+                response.put("eventType","unknown");
+                response.put("fileId",file_id);
+            }
+            response_list.add(response);
 
-        File file = service.files().get(fileId)
-                .setFields("id, name, trashed, explicitlyTrashed, createdTime, modifiedTime, mimeType")
-                .execute();
-
-        // 파일이 삭제된 상태인지 확인
-        if (Boolean.TRUE.equals(change.getRemoved()) || Boolean.TRUE.equals(file.getTrashed()) || Boolean.TRUE.equals(file.getExplicitlyTrashed()) ){
-            response.put("eventType","delete");
-            response.put("fileId",fileId);
         }
 
-        // 파일이 새로 생성된 상태인지 확인 (현재 시각과 비교)
-        File changeFile = change.getFile();
-        if (changeFile == null) {
-            return null;
-        }
-
-        if (Boolean.TRUE.equals(changeFile.getTrashed())) {
-            response.put("eventType","delete");
-            response.put("fileId",fileId);
-            log.info("Response: {}", response);
-            return response;
-        }
-        String eventType = isNewOrModified(changeFile);
-        if (eventType.equals(null)){
-            response.put("eventType","unknown");
-            response.put("fileId",fileId);
-            log.info("Response: {}", response);
-            return response;
-        }
-        response.put("eventType",eventType);
-        response.put("fileId",fileId);
-        log.info("Response: {}", response);
-        return response;
+        return response_list;
     }
 
     private String extractPageToken(String resource_uri) {
@@ -177,6 +165,34 @@ public class DriveApiService {
 
         return uriParts[uriParts.length - 1];
     }
+
+    private boolean isDuplicateLog(Change changeFile){
+        DateTime time = changeFile.getTime();
+
+        //현재 시각
+        DateTime now = new DateTime(System.currentTimeMillis());
+
+        // 현재시각과 비교해서 1분 이내에 생성된 로그인지 확인
+        return time.getValue() > now.getValue() - 60000;
+    }
+
+    private String decideType(Change changeFile){
+        if (Boolean.TRUE.equals(changeFile.getRemoved())){
+            return "delete";
+        }
+        // 파일 추가 or 파일 변경(수정)
+        if (changeFile.getFile() == null) {
+            log.error("File is null.");
+            return null;
+        }
+
+        if (fileActivityRepo.existsBySaaSFileId(changeFile.getFileId())){
+            return "update";
+        } else {
+            return "create";
+        }
+    }
+
 
     private String isNewOrModified(File file) {
         if (file == null) {
