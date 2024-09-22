@@ -19,4 +19,7 @@ public interface FileActivityRepo extends JpaRepository<Activities, Long>{
     @Query("SELECT a FROM Activities a WHERE a.saasFileId = :saasFileId ORDER BY a.eventTs DESC LIMIT 1")
     Optional<Activities> findRecentBySaasFileId(@Param("saasFileId") String saasFileId);
 
+    @Query("SELECT COUNT(a) > 0 FROM Activities a WHERE a.saasFileId = :saasFileId")
+    boolean existsBySaaSFileId(@Param("saasFileId") String saasFileId);
+
 }

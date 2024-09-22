@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -41,24 +42,27 @@ public class DriveEventController {
         int workspaceId = workspaceConfigRepo.getWorkspaceConfigId(webhookUrl).orElse(null);
         Drive service = googleUtil.getDriveService(workspaceId);
         String resource_id = payload.get("resourceUri").toString();
-        Map<String,String> eventType = driveApiService.getFileDetails(service,resource_id);
-        String file_id = eventType.get("fileId");
+        List<Map<String,String>> event_detail = driveApiService.getFileDetails(service,resource_id);
 
+        for (Map<String,String> detail : event_detail){
+            String file_id = detail.get("fileId");
+            String event_type = detail.get("eventType");
 
-        switch (eventType.get("eventType")) {
-            case "create" -> {
-                log.info("File create event received");
-                googleDriveEvent.handledCreateEvent(workspaceId,file_id);
+            switch (event_type) {
+                case "create" -> {
+                    log.info("File create event received");
+                    googleDriveEvent.handledCreateEvent(workspaceId,file_id);
+                }
+                case "update" -> {
+                    log.info("File update event received");
+                    googleDriveEvent.handledUpdateEvent(workspaceId,file_id);
+                }
+                case "delete" -> {
+                    log.info("File delete event received");
+                    googleDriveEvent.handledDeleteEvent(workspaceId,file_id);
+                }
+                default -> log.info("Unknown event received");
             }
-            case "update" -> {
-                log.info("File update event received");
-                googleDriveEvent.handledUpdateEvent(workspaceId,file_id);
-            }
-            case "delete" -> {
-                log.info("File delete event received");
-                googleDriveEvent.handledDeleteEvent(workspaceId,file_id);
-            }
-            default -> log.info("Unknown event received");
         }
         return ResponseEntity.ok("File Change Event received and logged");
     }
