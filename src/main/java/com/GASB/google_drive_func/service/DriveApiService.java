@@ -149,21 +149,33 @@ public class DriveApiService {
         return response_list;
     }
 
-    private String extractPageToken(String resource_uri) {
-        log.info("extractPageToken to {}", resource_uri);
-        if (resource_uri == null || resource_uri.isEmpty()) {
-            log.error("Resource URI is null or empty.");
-            return null;
+    private String extractPageToken(String resourceUri) {
+        if (resourceUri == null || resourceUri.isEmpty()) {
+            return null; // URI가 null이거나 비어있을 경우 null 반환
         }
 
-        String[] uriParts = resource_uri.split("=");
-        if (uriParts.length < 2) {
-            log.error("Invalid resource URI format: {}", resource_uri);
-            return null;
+        try {
+            // URI에서 '?' 이후의 쿼리 문자열 추출
+            String query = resourceUri.split("\\?")[1];
+
+            // '&'로 구분하여 각 쿼리 파라미터를 분리
+            String[] params = query.split("&");
+
+            // 각 파라미터에서 'pageToken'을 찾음
+            for (String param : params) {
+                String[] keyValue = param.split("=");
+                if (keyValue.length == 2 && "pageToken".equals(keyValue[0])) {
+                    return keyValue[1]; // pageToken 값 반환
+                }
+            }
+        } catch (ArrayIndexOutOfBoundsException e) {
+            // 쿼리 문자열이 없거나 형식이 잘못된 경우 예외 처리
+            log.error("Error extracting pageToken: {}", e.getMessage());
         }
 
-        return uriParts[uriParts.length - 1];
+        return null; // pageToken을 찾지 못한 경우 null 반환
     }
+
 
     private boolean isDuplicateLog(Change changeFile){
         DateTime time = changeFile.getTime();
