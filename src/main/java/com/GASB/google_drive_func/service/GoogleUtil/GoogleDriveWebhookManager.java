@@ -50,18 +50,26 @@ public class GoogleDriveWebhookManager {
                 .setId(channelId)
                 .setType("web_hook")
                 .setAddress(webhookUrl)
-                .setExpiration(System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000L); // 7 days from now
+                .setExpiration(System.currentTimeMillis() + 60 * 60 * 1000L); // 1 hour from now
 
         String pageToken = drive.changes().getStartPageToken().execute().getStartPageToken();
 
         try {
-            drive.changes().watch(pageToken, channel).execute();
+            drive.changes().watch(pageToken, channel)
+                            .setIncludeRemoved(true)
+                            .setIncludeItemsFromAllDrives(true)
+                            .setSupportsAllDrives(true)
+                            .execute();
             log.info("Started watching drive changes for workspace {} from pageToken: {}", workspaceId, pageToken);
         } catch (GoogleJsonResponseException e) {
             if (e.getStatusCode() == 409) {
                 log.warn("Channel already exists for workspace {}. Stopping existing channel and creating a new one.", workspaceId);
                 stopChannel(drive, channelId);
-                drive.changes().watch(pageToken, channel).execute();
+                drive.changes().watch(pageToken, channel)
+                        .setIncludeRemoved(true)
+                        .setIncludeItemsFromAllDrives(true)
+                        .setSupportsAllDrives(true)
+                        .execute();
             } else {
                 throw e;
             }
