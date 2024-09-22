@@ -13,7 +13,10 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -177,16 +180,31 @@ public class DriveApiService {
         return null; // pageToken을 찾지 못한 경우 null 반환
     }
 
+    private boolean isDuplicateLog(Change changeFile) {
+        if (changeFile.getTime() == null) {
+            // 시간 정보가 없는 경우 처리
+            return false; // 또는 적절한 기본값 반환
+        }
 
-    private boolean isDuplicateLog(Change changeFile){
-        DateTime time = changeFile.getTime();
+        // Change의 시간 정보를 Instant로 변환
+        Instant changeInstant = Instant.ofEpochMilli(changeFile.getTime().getValue());
 
-        //현재 시각
-        DateTime now = new DateTime(System.currentTimeMillis());
+        // 한국 시간대 (UTC+9:00)로 변환
+        ZoneId koreaZoneId = ZoneId.of("Asia/Seoul");
+        ZonedDateTime changeTime = changeInstant.atZone(koreaZoneId);
+        log.info("Change time: {}", changeTime);
+        // 현재 시각을 한국 시간대로 설정
+        ZonedDateTime now = ZonedDateTime.now(koreaZoneId);
+        log.info("Current time: {}", now);
 
-        // 현재시각과 비교해서 1분 이내에 생성된 로그인지 확인
-        return time.getValue() > now.getValue() - 60000;
+        // 두 시간 사이의 차이를 초 단위로 계산
+        long secondsBetween = ChronoUnit.SECONDS.between(changeTime, now);
+        log.info("Seconds between: {}", secondsBetween);
+
+        // 1분(60초) 이내인지 확인
+        return secondsBetween <= 60;
     }
+
 
     private String decideType(Change changeFile){
         if (Boolean.TRUE.equals(changeFile.getRemoved())){
