@@ -119,12 +119,11 @@ public class DriveApiService {
         List<Map<String,String>> response_list = new ArrayList<>();
 
         // 페이지 토큰 추출
-        String PageToken = extractPageToken(resource_uri);
-        log.info("Page Token: {}", PageToken);
+        StartPageToken getPageToken = service.changes().getStartPageToken().execute();
+        String pageToken = getPageToken.getStartPageToken();
+        log.info("Page Token: {}", pageToken);
         // 파일 변경 이벤트 조회
-        ChangeList changeList = service.changes().list(PageToken)
-                .setPageSize(1)
-                .execute();
+        ChangeList changeList = service.changes().list(pageToken).execute();
         log.info("ChangeList: {}", changeList);
         if (changeList.getChanges().isEmpty()) {
             return null;
@@ -139,7 +138,7 @@ public class DriveApiService {
             }
             String event_Type = decideType(change);
             String file_id = change.getFileId();
-            if (!event_Type.equals(null)){
+            if (event_Type != null){
                 response.put("eventType",event_Type);
                 response.put("fileId",file_id);
             } else{
@@ -151,33 +150,6 @@ public class DriveApiService {
         }
 
         return response_list;
-    }
-
-    private String extractPageToken(String resourceUri) {
-        if (resourceUri == null || resourceUri.isEmpty()) {
-            return null; // URI가 null이거나 비어있을 경우 null 반환
-        }
-
-        try {
-            // URI에서 '?' 이후의 쿼리 문자열 추출
-            String query = resourceUri.split("\\?")[1];
-
-            // '&'로 구분하여 각 쿼리 파라미터를 분리
-            String[] params = query.split("&");
-
-            // 각 파라미터에서 'pageToken'을 찾음
-            for (String param : params) {
-                String[] keyValue = param.split("=");
-                if (keyValue.length == 2 && "pageToken".equals(keyValue[0])) {
-                    return keyValue[1]; // pageToken 값 반환
-                }
-            }
-        } catch (ArrayIndexOutOfBoundsException e) {
-            // 쿼리 문자열이 없거나 형식이 잘못된 경우 예외 처리
-            log.error("Error extracting pageToken: {}", e.getMessage());
-        }
-
-        return null; // pageToken을 찾지 못한 경우 null 반환
     }
 
     private boolean isDuplicateLog(Change changeFile) {
