@@ -1,16 +1,23 @@
 package com.GASB.google_drive_func.service.GoogleUtil;
 
+import com.GASB.google_drive_func.model.entity.GooglePageToken;
+import com.GASB.google_drive_func.model.entity.OrgSaaS;
+import com.GASB.google_drive_func.model.repository.channel.GooglePageTokenRepo;
+import com.GASB.google_drive_func.model.repository.org.OrgSaaSRepo;
 import com.GASB.google_drive_func.model.repository.org.WorkspaceConfigRepo;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.Channel;
+import com.google.api.services.drive.model.StartPageToken;
 import lombok.extern.slf4j.Slf4j;
+import org.aspectj.weaver.ast.Or;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -22,10 +29,15 @@ public class GoogleDriveWebhookManager {
     private final WorkspaceConfigRepo workspaceConfigRepo;
     private final Map<Integer, String> channelIds = new ConcurrentHashMap<>();
     private final GoogleUtil googleUtil;
+    private final GooglePageTokenRepo googlePageTokenRepo;
+    private final OrgSaaSRepo orgSaaSRepo;
 
-    public GoogleDriveWebhookManager(WorkspaceConfigRepo workspaceConfigRepo, GoogleUtil googleUtil) {
+    public GoogleDriveWebhookManager(WorkspaceConfigRepo workspaceConfigRepo, GoogleUtil googleUtil,
+                                     GooglePageTokenRepo googlePageTokenRepo, OrgSaaSRepo orgSaaSRepo) {
         this.workspaceConfigRepo = workspaceConfigRepo;
         this.googleUtil = googleUtil;
+        this.googlePageTokenRepo = googlePageTokenRepo;
+        this.orgSaaSRepo = orgSaaSRepo;
     }
 
     public CompletableFuture<Void> setWebhook(int workspaceId) {
@@ -53,6 +65,20 @@ public class GoogleDriveWebhookManager {
                 .setExpiration(System.currentTimeMillis() + 60 * 60 * 1000L); // 1 hour from now
 
         String pageToken = drive.changes().getStartPageToken().execute().getStartPageToken();
+
+        // save page token to database
+        // orgsaas오브젝트 연결 필요
+        OrgSaaS orgSaaSObj = orgSaaSRepo.findById(workspaceId).orElseThrow(() -> new IllegalStateException("Workspace not found"));
+
+        GooglePageToken googlePageToken = GooglePageToken.builder()
+                .orgSaaS(orgSaaSObj)
+                .channelId(channelId)
+                .pageToken(pageToken)
+                .build();
+        if (googlePageToken == null){
+            log.info("googlePageToken is null");
+        }
+        googlePageTokenRepo.save(Objects.requireNonNull(googlePageToken));
 
         try {
             drive.changes().watch(pageToken, channel)
