@@ -10,12 +10,14 @@ import com.GASB.google_drive_func.model.repository.user.MonitoredUserRepo;
 import com.GASB.google_drive_func.service.DriveApiService;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
 import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.model.Channel;
 import com.google.api.services.drive.model.File;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -109,6 +111,48 @@ public class DriveFileService {
                 "application/vnd.google-apps.presentation".equalsIgnoreCase(file.getMimeType());  // Google Slides
     }
 
+    public void deleteAllWatch() throws Exception {
+        // 드라이브 서비스 가져오기
+        Drive service = googleUtil.getDriveService(231);
+
+        // null 체크
+        if (service == null) {
+            throw new Exception("Drive service is null");
+        }
+
+        // 채널 ID 리스트 초기화
+        List<String> channelIds = new ArrayList<>();
+        channelIds.add("19f9a220-782a-4a45-8c8f-4c0d3927d3df");
+
+        // 리소스 ID 설정
+        String resourceId = "8v4U7LlTVAH2h60NhO4RybdKoAY";
+
+        // 채널 ID 리스트가 비어 있는지 확인
+        if (channelIds.isEmpty()) {
+            System.out.println("No channels to stop.");
+            return;
+        }
+
+        // 각 채널에 대해 중지 작업 수행
+        for (String channelId : channelIds) {
+            if (channelId != null && !channelId.isEmpty()) {
+                try {
+                    // 채널 중지 메소드 호출
+                    Channel channel = new Channel();
+                    channel.setId(channelId);
+                    channel.setResourceId(resourceId);
+
+                    service.channels().stop(channel).execute();
+                    System.out.println("Successfully stopped channel: " + channelId);
+                } catch (IOException e) {
+                    // 예외 발생 시 로깅
+                    System.err.println("Failed to stop channel: " + channelId + ", reason: " + e.getMessage());
+                }
+            } else {
+                System.out.println("Invalid channelId: " + channelId);
+            }
+        }
+    }
 
 
 }
