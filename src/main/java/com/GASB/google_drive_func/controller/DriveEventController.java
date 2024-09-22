@@ -41,8 +41,9 @@ public class DriveEventController {
         String webhookUrl = defaultUrl + workspace_Id;
         int workspaceId = workspaceConfigRepo.getWorkspaceConfigId(webhookUrl);
         Drive service = googleUtil.getDriveService(workspaceId);
-        String resource_id = payload.get("resourceUri").toString();
-        List<Map<String,String>> event_detail = driveApiService.getFileDetails(service,resource_id);
+        String channel_id = payload.get("channelId").toString();
+
+        List<Map<String,String>> event_detail = driveApiService.getFileDetails(service,channel_id);
         log.info("Event Detail: {}", event_detail);
         for (Map<String,String> detail : event_detail){
             String file_id = detail.get("fileId");
