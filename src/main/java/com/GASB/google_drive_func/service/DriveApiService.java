@@ -121,7 +121,6 @@ public class DriveApiService {
         // 파일 변경 이벤트 조회
         ChangeList changeList = service.changes().list(PageToken)
                 .setPageSize(1)
-                .setFields("changes(fileId,removed,file(id,name,trashed,createdTime,modifiedTime,mimeType)),newStartPageToken")
                 .execute();
         log.info("ChangeList: {}", changeList);
         if (changeList.getChanges().isEmpty()) {
