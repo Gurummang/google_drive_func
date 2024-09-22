@@ -68,6 +68,7 @@ public class GoogleDriveEvent {
                     "file_upload",
                     googleDriveEventObject.getDriveService()
             );
+            log.info("File create event handled successfully");
         } catch (IllegalArgumentException e) {
             log.error("Error handling file create event", e);
             throw new IllegalArgumentException("Error handling file create event");
@@ -90,6 +91,7 @@ public class GoogleDriveEvent {
                     "file_change",
                     googleDriveEventObject.getDriveService()
             );
+            log.info("File update event handled successfully");
         } catch (IllegalArgumentException e) {
             log.error("Error handling file update event", e);
             throw new IllegalArgumentException("Error handling file update event");
@@ -132,6 +134,7 @@ public class GoogleDriveEvent {
 
             // 메시지 전송
             messageSender.sendGroupingMessage(activities.getId());
+            log.info("File delete event handled successfully");
         } catch (IllegalArgumentException e) {
             log.error("Error handling file delete event", e);
             throw new IllegalArgumentException("Error handling file delete event");

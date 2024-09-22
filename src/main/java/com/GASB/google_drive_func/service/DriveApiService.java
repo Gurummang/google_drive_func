@@ -131,6 +131,7 @@ public class DriveApiService {
             Map<String,String> response = new HashMap<>();
             log.info("Change: {}", change);
             if (isDuplicateLog(change)){
+                log.info("Duplicate log: {}", change.getFileId());
                 continue;
             }
             String event_Type = decideType(change);
