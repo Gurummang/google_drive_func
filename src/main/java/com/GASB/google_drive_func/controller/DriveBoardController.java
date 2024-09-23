@@ -12,10 +12,12 @@ import com.GASB.google_drive_func.service.file.DriveFileService;
 import com.GASB.google_drive_func.service.file.FileUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -160,6 +162,16 @@ public class DriveBoardController {
         }
     }
 
+    //모든 웹훅을 제거하는 함수
+    @GetMapping("/stop")
+    public ResponseEntity<?> deleteWatch(){
+        try {
+            driveFileService.deleteAllWatch();
+            return ResponseEntity.ok("All watch deleted");
+        } catch (Exception e){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error deleting all watch");
+        }
+    }
 
     @PostMapping("/files/delete")
     @ValidateJWT
