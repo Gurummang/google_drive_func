@@ -138,6 +138,7 @@ public class DriveApiService {
         ChangeList changeList = service.changes().list(pageToken).execute();
         log.info("ChangeList: {}", changeList);
         if (changeList.getChanges().isEmpty()) {
+            log.info("No changes found.");
             return null;
         }
 
