@@ -93,6 +93,7 @@ public class GoogleDriveWebhookManager {
 
         try {
             drive.changes().watch(pageToken, channel)
+                    .setDriveId(orgSaaSObj.getSpaceId())
                             .setIncludeRemoved(true)
                             .setIncludeItemsFromAllDrives(true)
                             .setSupportsAllDrives(true)
