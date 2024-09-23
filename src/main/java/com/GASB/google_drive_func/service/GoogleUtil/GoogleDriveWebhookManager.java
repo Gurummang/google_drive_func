@@ -7,6 +7,7 @@ import com.GASB.google_drive_func.model.repository.org.OrgSaaSRepo;
 import com.GASB.google_drive_func.model.repository.org.WorkspaceConfigRepo;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.model.Change;
 import com.google.api.services.drive.model.Channel;
 import com.google.api.services.drive.model.StartPageToken;
 import lombok.extern.slf4j.Slf4j;
@@ -64,11 +65,21 @@ public class GoogleDriveWebhookManager {
                 .setAddress(webhookUrl)
                 .setExpiration(System.currentTimeMillis() + 60 * 60 * 1000L); // 1 hour from now
 
-        String pageToken = drive.changes().getStartPageToken().execute().getStartPageToken();
+
+
+
 
         // save page token to database
         // orgsaas오브젝트 연결 필요
         OrgSaaS orgSaaSObj = orgSaaSRepo.findById(workspaceId).orElseThrow(() -> new IllegalStateException("Workspace not found"));
+
+
+        String pageToken = drive.changes().getStartPageToken()
+                .setDriveId(orgSaaSObj.getSpaceId())
+                .setSupportsAllDrives(true)
+                .execute()
+                .getStartPageToken();
+        log.info("Fetched start page token: {}", pageToken);
 
         GooglePageToken googlePageToken = GooglePageToken.builder()
                 .orgSaaS(orgSaaSObj)
