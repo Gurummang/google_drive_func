@@ -1,7 +1,9 @@
 package com.GASB.google_drive_func.service;
 
+import com.GASB.google_drive_func.model.entity.OrgSaaS;
 import com.GASB.google_drive_func.model.repository.channel.GooglePageTokenRepo;
 import com.GASB.google_drive_func.model.repository.files.FileActivityRepo;
+import com.GASB.google_drive_func.model.repository.org.OrgSaaSRepo;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.util.DateTime;
@@ -30,11 +32,13 @@ public class DriveApiService {
     private final GoogleUtil googleUtil;
     private final FileActivityRepo fileActivityRepo;
     private final GooglePageTokenRepo googlePageTokenRepo;
+    private final OrgSaaSRepo orgSaaSRepo;
     @Autowired
-    public DriveApiService(GoogleUtil googleUtil, FileActivityRepo fileActivityRepo, GooglePageTokenRepo googlePageTokenRepo) {
+    public DriveApiService(GoogleUtil googleUtil, FileActivityRepo fileActivityRepo, GooglePageTokenRepo googlePageTokenRepo, OrgSaaSRepo orgSaaSRepo) {
         this.googleUtil = googleUtil;
         this.fileActivityRepo = fileActivityRepo;
         this.googlePageTokenRepo = googlePageTokenRepo;
+        this.orgSaaSRepo = orgSaaSRepo;
     }
 
 
@@ -134,6 +138,7 @@ public class DriveApiService {
         ChangeList changeList = service.changes().list(pageToken).execute();
         log.info("ChangeList: {}", changeList);
         if (changeList.getChanges().isEmpty()) {
+            log.info("No changes found.");
             return null;
         }
 
@@ -158,8 +163,17 @@ public class DriveApiService {
 
         }
         // 페이지 토큰 업데이트
-        String newToken = changeList.getNewStartPageToken();
-        googlePageTokenRepo.updatePageTokenByChannelId(channel_id, newToken);
+        int org_saas_id = googlePageTokenRepo.findByChannelId(channel_id);
+        OrgSaaS orgSaaSObj = orgSaaSRepo.findById(org_saas_id).orElseThrow(() -> new IllegalStateException("Workspace not found"));
+        String newPageToken = service.changes().getStartPageToken()
+                .setDriveId(orgSaaSObj.getSpaceId())
+                .setSupportsAllDrives(true)
+                .execute()
+                .getStartPageToken();
+        log.info("New Page Token: {}", newPageToken);
+        googlePageTokenRepo.updatePageTokenByChannelId(channel_id, newPageToken);
+
+
 
         return response_list;
     }
