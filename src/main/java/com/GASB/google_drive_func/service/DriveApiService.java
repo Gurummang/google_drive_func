@@ -125,6 +125,9 @@ public class DriveApiService {
 
         List<Map<String,String>> response_list = new ArrayList<>();
 
+        int org_saas_id = googlePageTokenRepo.findByChannelId(channel_id);
+        OrgSaaS orgSaaSObj = orgSaaSRepo.findById(org_saas_id).orElseThrow(() -> new IllegalStateException("Workspace not found"));
+
         // 페이지 토큰 추출
         String pageToken = googlePageTokenRepo.getPageTokenByChannelId(channel_id).orElse(null);
         if (pageToken == null) {
@@ -135,12 +138,22 @@ public class DriveApiService {
 
 
         // 파일 변경 이벤트 조회
-        ChangeList changeList = service.changes().list(pageToken).execute();
+        ChangeList changeList = service.changes()
+                .list(pageToken)
+                .setDriveId(orgSaaSObj.getSpaceId())
+                .setIncludeRemoved(true)
+                .setSupportsAllDrives(true)
+                .setIncludeItemsFromAllDrives(true)
+                .execute();
+
         log.info("ChangeList: {}", changeList);
         if (changeList.getChanges().isEmpty()) {
             log.info("No changes found.");
             return null;
         }
+        //여기서 문제가 발생한다!!!!!!!!!!!!!!!!!!
+
+
 
         for (Change change : changeList.getChanges()){
             Map<String,String> response = new HashMap<>();
@@ -163,8 +176,7 @@ public class DriveApiService {
 
         }
         // 페이지 토큰 업데이트
-        int org_saas_id = googlePageTokenRepo.findByChannelId(channel_id);
-        OrgSaaS orgSaaSObj = orgSaaSRepo.findById(org_saas_id).orElseThrow(() -> new IllegalStateException("Workspace not found"));
+
         String newPageToken = service.changes().getStartPageToken()
                 .setDriveId(orgSaaSObj.getSpaceId())
                 .setSupportsAllDrives(true)
