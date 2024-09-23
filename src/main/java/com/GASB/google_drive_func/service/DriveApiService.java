@@ -140,7 +140,8 @@ public class DriveApiService {
         for (Change change : changeList.getChanges()){
             Map<String,String> response = new HashMap<>();
             log.info("Change: {}", change);
-            if (isDuplicateLog(change)){
+            if (isDuplicateLog(change) || change.getChangeType().equals("drive")){
+                log.info("Change Event is dir or duplicate log: {}", change.getChangeType());
                 log.info("Duplicate log: {}", change.getFileId());
                 continue;
             }
@@ -157,8 +158,8 @@ public class DriveApiService {
 
         }
         // 페이지 토큰 업데이트
-        String newToken = service.changes().getStartPageToken().execute().getStartPageToken();
-        googlePageTokenRepo.UpdatePageTokenByChannelId(channel_id, newToken);
+        String newToken = changeList.getNewStartPageToken();
+        googlePageTokenRepo.updatePageTokenByChannelId(channel_id, newToken);
 
         return response_list;
     }
@@ -184,13 +185,13 @@ public class DriveApiService {
         long secondsBetween = ChronoUnit.SECONDS.between(changeTime, now);
         log.info("Seconds between: {}", secondsBetween);
 
-        // 1분(60초) 이내인지 확인
-        return secondsBetween <= 60;
+        // 30초 이내인지 확인
+        return secondsBetween >= 30;
     }
 
 
-    private String decideType(Change changeFile){
-        if (Boolean.TRUE.equals(changeFile.getRemoved())){
+    private String decideType(Change changeFile) {
+        if (Boolean.TRUE.equals(changeFile.getRemoved()) || Boolean.TRUE.equals(changeFile.getFile().getTrashed())) {
             return "delete";
         }
         // 파일 추가 or 파일 변경(수정)
@@ -199,43 +200,10 @@ public class DriveApiService {
             return null;
         }
 
-        if (fileActivityRepo.existsBySaaSFileId(changeFile.getFileId())){
+        if (fileActivityRepo.existsBySaaSFileId(changeFile.getFileId())) {
             return "update";
         } else {
             return "create";
         }
     }
-
-
-    private String isNewOrModified(File file) {
-        if (file == null) {
-            log.error("File is null.");
-            return "unknown"; // 파일이 null인 경우
-        }
-
-        try {
-            Instant createdTime = Instant.ofEpochMilli(file.getCreatedTime().getValue());
-            Instant modifiedTime = Instant.ofEpochMilli(file.getModifiedTime().getValue());
-
-            if (modifiedTime == null) {
-                log.warn("Modified time is null for file: {}", file.getId());
-                return "new"; // 수정 시간이 없는 경우 새로 생성된 것으로 간주
-            }
-
-            if (createdTime.isAfter(modifiedTime)) {
-                log.info("File is new: {}", file.getId());
-                return "new";
-            } else {
-                log.info("File is modified: {}", file.getId());
-                return "modified";
-            }
-        } catch (NullPointerException e) {
-            log.error("Error processing file: {}, message: {}", file != null ? file.getId() : "unknown", e.getMessage());
-            return "unknown"; // 예외 발생 시
-        }
-    }
-
-
-
-
 }
