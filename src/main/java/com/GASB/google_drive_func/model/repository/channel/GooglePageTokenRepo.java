@@ -21,6 +21,6 @@ public interface GooglePageTokenRepo extends JpaRepository<GooglePageToken, Long
     @Transactional
     @Modifying
     @Query("UPDATE GooglePageToken g SET g.pageToken = :pageToken WHERE g.channelId = :channelId")
-    void UpdatePageTokenByChannelId(@Param("channelId") String channelId, @Param("pageToken") String pageToken);
+    void updatePageTokenByChannelId(@Param("channelId") String channelId, @Param("pageToken") String pageToken);
 
 }
