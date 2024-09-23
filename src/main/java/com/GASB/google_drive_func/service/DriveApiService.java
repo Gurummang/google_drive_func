@@ -67,7 +67,7 @@ public class DriveApiService {
         try {
             return service.files().get(fileId)
                     .setSupportsAllDrives(true)
-                    .setFields("id, name, mimeType, size, createdTime, modifiedTime, parents, webViewLink, iconLink, thumbnailLink, permissions(id, type, emailAddress, role), lastModifyingUser(displayName, emailAddress)")
+                    .setFields("id, name, mimeType, size, createdTime, modifiedTime, parents, permissions(id, type, emailAddress, role), lastModifyingUser(displayName, emailAddress, permissionId)")
                     .execute();
         } catch (GoogleJsonResponseException e) {
             if (e.getStatusCode() == 404) {
