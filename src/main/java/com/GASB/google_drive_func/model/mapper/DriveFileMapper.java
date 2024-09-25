@@ -69,7 +69,12 @@ public class DriveFileMapper {
         DateTime createdTime = file.getCreatedTime();
         LocalDateTime eventTs = null;
         if (createdTime != null) {
-            eventTs = LocalDateTime.ofInstant(Instant.ofEpochMilli(createdTime.getValue()), zoneId);
+            eventTs = LocalDateTime.ofInstant(
+                    Instant.ofEpochMilli(file.getCreatedTime().getValue()), zoneId
+            );
+        } else {
+            log.warn("File created time is null. Using current time instead.");
+            eventTs = LocalDateTime.now(zoneId);
         }
 
         // eventType null 체크
