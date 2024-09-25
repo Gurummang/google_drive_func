@@ -22,6 +22,9 @@ public interface GooglePageTokenRepo extends JpaRepository<GooglePageToken, Long
     @Query("SELECT g.pageToken FROM GooglePageToken g WHERE g.channelId = :channelId")
     Optional<String> getPageTokenByChannelId(@Param("channelId") String channelId);
 
+    @Query("SELECT COUNT(g) > 0 FROM GooglePageToken g WHERE g.channelId = :channeld_id")
+    boolean existsByChannelId(@Param("channeld_id") String channelId);
+
     @Transactional
     @Modifying
     @Query("UPDATE GooglePageToken g SET g.pageToken = :pageToken WHERE g.channelId = :channelId")

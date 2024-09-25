@@ -28,7 +28,7 @@ public class ScanUtil {
     public void scanFile(String path, FileUploadTable fileUploadTableObject, String MIMEType, String Extension) {
         try {
             // 중복 튜플 방지
-            if (isDuplicatedTuple(fileUploadTableObject)) {
+            if (typeScanRepo.existsByUploadId(fileUploadTableObject)) {
                 log.error("Duplicated tuple: {}", fileUploadTableObject.getId());
                 return;
             }
@@ -86,13 +86,6 @@ public class ScanUtil {
                 .extension(extension)
                 .build();
         typeScanRepo.save(typeScan);
-    }
-
-    private boolean isDuplicatedTuple(FileUploadTable fileUploadTable){
-        if(typeScanRepo.existsByUploadId(fileUploadTable)){
-            return true;
-        }
-        return false;
     }
     private String getFileExtension(File file) {
         String fileName = file.getName();

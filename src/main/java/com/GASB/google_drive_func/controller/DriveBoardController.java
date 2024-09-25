@@ -162,16 +162,6 @@ public class DriveBoardController {
         }
     }
 
-    //모든 웹훅을 제거하는 함수
-    @GetMapping("/stop")
-    public ResponseEntity<?> deleteWatch(){
-        try {
-            driveFileService.deleteAllWatch();
-            return ResponseEntity.ok("All watch deleted");
-        } catch (Exception e){
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error deleting all watch");
-        }
-    }
 
     @PostMapping("/files/delete")
     @ValidateJWT
