@@ -62,7 +62,7 @@ public class DriveApiService {
         }
     }
 
-    public File fetchOneFile(String fileId, int workspaceId, Drive service) throws Exception {
+    public File fetchOneFile(String fileId, Drive service) throws Exception {
 
         try {
             return service.files().get(fileId)
@@ -144,6 +144,7 @@ public class DriveApiService {
                 .setIncludeRemoved(true)
                 .setSupportsAllDrives(true)
                 .setIncludeItemsFromAllDrives(true)
+                .setIncludeCorpusRemovals(true)
                 .execute();
 
         log.info("ChangeList: {}", changeList);
@@ -151,9 +152,6 @@ public class DriveApiService {
             log.info("No changes found.");
             return null;
         }
-        //여기서 문제가 발생한다!!!!!!!!!!!!!!!!!!
-
-
 
         for (Change change : changeList.getChanges()){
             Map<String,String> response = new HashMap<>();

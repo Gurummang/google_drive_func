@@ -96,6 +96,7 @@ public class GoogleDriveWebhookManager {
                     .setDriveId(orgSaaSObj.getSpaceId())
                             .setIncludeRemoved(true)
                             .setIncludeItemsFromAllDrives(true)
+                            .setIncludeCorpusRemovals(true)
                             .setSupportsAllDrives(true)
                             .execute();
             log.info("Started watching drive changes for workspace {} from pageToken: {}", workspaceId, pageToken);

@@ -53,18 +53,18 @@ public class DriveEventController {
 
             switch (event_type) {
                 case "create" -> {
-                    log.info("File create event received");
+                    log.info("{} File create event received",file_id);
                     googleDriveEvent.handledCreateEvent(workspaceId,file_id);
                 }
                 case "update" -> {
-                    log.info("File update event received");
+                    log.info("{} File update event received",file_id);
                     googleDriveEvent.handledUpdateEvent(workspaceId,file_id);
                 }
                 case "delete" -> {
-                    log.info("File delete event received");
+                    log.info("{} File delete event received",file_id);
                     googleDriveEvent.handledDeleteEvent(workspaceId,file_id);
                 }
-                default -> log.info("Unknown event received");
+                default -> log.info("{} Unknown event received",file_id);
             }
         }
         return ResponseEntity.ok("File Change Event received and logged");

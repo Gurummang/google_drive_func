@@ -38,7 +38,7 @@ public class GoogleDriveEventObject {
         Drive service = googleUtil.getDriveService(workspaceId);
 
         // 파일 및 마지막 수정자 정보 조회
-        File file = driveApiService.fetchOneFile(file_id, workspaceId, service);
+        File file = driveApiService.fetchOneFile(file_id, service);
         String lastModifiedUser = file.getLastModifyingUser().getEmailAddress();
         MonitoredUsers monitoredUser = monitoredUserRepo.findByEmail(lastModifiedUser).orElse(null);
 
