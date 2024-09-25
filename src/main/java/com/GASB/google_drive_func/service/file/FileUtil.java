@@ -291,6 +291,8 @@ public class FileUtil {
 
                 if (!fileUploadRepository.existsBySaasFileIdAndTimestamp(fileUploadTableObj.getSaasFileId(), fileUploadTableObj.getTimestamp())) {
                     try {
+                        log.info("FileUploadTable object saasFileId: {}", fileUploadTableObj.getSaasFileId());
+                        log.info("FileUploadTable object timestamp: {}", fileUploadTableObj.getTimestamp());
                         fileUploadRepository.save(fileUploadTableObj);
                         if (fileUploadTableObj.getId() == null){
                             log.error("FileUploadTable id is null");

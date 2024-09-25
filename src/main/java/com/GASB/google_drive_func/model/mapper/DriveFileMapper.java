@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -28,6 +30,7 @@ public class DriveFileMapper {
     private final FileUploadRepository fileUploadRepository;
 
     private final ZoneId zoneId = ZoneId.of("Asia/Seoul");
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public StoredFile toStoredFileEntity(File file, String hash, String filePath) {
         if (file == null) {
@@ -49,6 +52,7 @@ public class DriveFileMapper {
         LocalDateTime kstTime = LocalDateTime.ofInstant(
                 Instant.ofEpochMilli(file.getCreatedTime().getValue()), zoneId
         );
+        log.info("kstTime : {}", kstTime);
 
         return FileUploadTable.builder()
                 .orgSaaS(orgSaas)

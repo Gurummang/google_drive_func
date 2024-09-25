@@ -208,20 +208,18 @@ public class DriveApiService {
         // 한국 시간대 (UTC+9:00)로 변환
         ZoneId koreaZoneId = ZoneId.of("Asia/Seoul");
         ZonedDateTime changeTime = changeInstant.atZone(koreaZoneId);
-        log.info("Change time: {}", changeTime);
-        // 현재 시각을 한국 시간대로 설정
-        ZonedDateTime now = ZonedDateTime.now(koreaZoneId);
-        log.info("Current time: {}", now);
 
         // lastAccessTime을 한국 시간으로 변경
         ZonedDateTime lastAccess = lastAccessTime.atZone(koreaZoneId);
-        log.info("Last access time: {}", lastAccess);
+
+
 
         // 로그에 있는 시간과 마지막 엑세스 시간 비교
         long secondsBetween = ChronoUnit.SECONDS.between(changeTime, lastAccess);
+        log.info("Change time : {} , Last access time : {}, Seconds between: {}", changeTime, lastAccess, secondsBetween);
 
         // 30초 이내인지 확인
-        return secondsBetween >= 30;
+        return secondsBetween <= 30;
     }
 
 
