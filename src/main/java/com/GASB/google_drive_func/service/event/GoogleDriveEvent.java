@@ -106,12 +106,12 @@ public class GoogleDriveEvent {
 
     @Transactional
     public void handledDeleteEvent(int workspace_id, String fileId) throws Exception {
-        GoogleDriveEventObject googleDriveEventObject;
+        GoogleDriveEventObject googleDriveEventObject = null;
         try {
             googleDriveEventObject = createGoogleDriveEventObject(workspace_id,fileId);
         } catch (RuntimeException e){
             log.error("Error handling file delete event", e);
-            throw new RuntimeException("Error handling file delete event");
+            throw new RuntimeException("Error handling file delete event during googleDriveEventObject method");
         }
 
         try {
@@ -125,9 +125,25 @@ public class GoogleDriveEvent {
                 log.error("Failed to find S3 path for file: {}", file_id);
                 throw new IllegalStateException("No S3 path found for file: " + file_id);
             }
+            try {
+                fileActivityRepo.save(activities);
+            } catch (IllegalArgumentException e) {
+                log.error("Error saving activity for delete: {}", e.getMessage());
+                throw new IllegalArgumentException("Error saving activity for delete");
+            } catch (Exception e) {
+                log.error("Error saving activity for delete: {}", e.getMessage());
+                throw new RuntimeException("Error saving activity for delete", e);
+            }
 
-            fileActivityRepo.save(activities);
-            fileUtil.deleteFileInS3(s3Path);
+            try {
+                fileUtil.deleteFileInS3(s3Path);
+            } catch (IllegalArgumentException e) {
+                log.error("Error deleting file in S3: {}", e.getMessage());
+                throw new IllegalArgumentException("Error deleting file in S3");
+            } catch (Exception e) {
+                log.error("Error deleting file in S3: {}", e.getMessage());
+                throw new RuntimeException("Error deleting file in S3", e);
+            }
 
             // file_upload 테이블에서 deleted 컬럼을 true로 변경
             fileUploadRepository.checkDelete(file_id);
@@ -136,11 +152,11 @@ public class GoogleDriveEvent {
             messageSender.sendGroupingMessage(activities.getId());
             log.info("File delete event handled successfully");
         } catch (IllegalArgumentException e) {
-            log.error("Error handling file delete event", e);
+            log.error("Error handling file delete event, IllegalArgumentException", e);
             throw new IllegalArgumentException("Error handling file delete event");
         } catch (Exception e) {
             log.error("Error handling file delete event", e);
-            throw new RuntimeException("Error handling file delete event", e);
+            throw new RuntimeException("Error handling file delete event ect Exception", e);
         }
     }
 
