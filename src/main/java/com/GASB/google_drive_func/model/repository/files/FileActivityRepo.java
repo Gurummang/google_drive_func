@@ -13,7 +13,7 @@ import java.util.Optional;
 @Repository
 public interface FileActivityRepo extends JpaRepository<Activities, Long>{
 
-    @Query("SELECT COUNT(a) > 0 FROM Activities a WHERE a.saasFileId = :saasFileId AND a.eventTs = :eventTs")
+    @Query("SELECT CASE WHEN EXISTS (SELECT 1 FROM Activities a WHERE a.saasFileId = :saasFileId AND a.eventTs = :eventTs) THEN true ELSE false END")
     boolean existsBySaasFileIdAndEventTs(@Param("saasFileId") String saasFileId, @Param("eventTs") LocalDateTime eventTs);
 
     @Query("SELECT a FROM Activities a WHERE a.saasFileId = :saasFileId ORDER BY a.eventTs DESC LIMIT 1")
