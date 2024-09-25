@@ -25,7 +25,7 @@ public interface FileUploadRepository extends JpaRepository<FileUploadTable, Lon
             "ORDER BY fu.timestamp DESC LIMIT 10")
     List<DriveRecentFileDTO> findRecentFilesByOrgIdAndSaasId(@Param("orgId") int orgId, @Param("saasId") int saasId);
 
-    @Query("SELECT CASE WHEN COUNT(f) > 0 THEN true ELSE false END FROM FileUploadTable f WHERE f.saasFileId = :saasFileId AND f.timestamp = :timestamp")
+    @Query("SELECT EXISTS (SELECT 1 FROM FileUploadTable f WHERE f.saasFileId = :saasFileId AND f.timestamp = :timestamp)")
     boolean existsBySaasFileIdAndTimestamp(@Param("saasFileId") String saasFileId, @Param("timestamp") LocalDateTime timestamp);
 
     @Query("SELECT fu FROM FileUploadTable fu WHERE fu.hash = :file_hash AND fu.id = :idx")
