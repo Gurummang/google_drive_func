@@ -27,6 +27,8 @@ public class DriveFileMapper {
     private final StoredFileRepository storedFileRepository;
     private final FileUploadRepository fileUploadRepository;
 
+    private final ZoneId zoneId = ZoneId.of("Asia/Seoul");
+
     public StoredFile toStoredFileEntity(File file, String hash, String filePath) {
         if (file == null) {
             return null;
@@ -43,14 +45,17 @@ public class DriveFileMapper {
         if (file == null) {
             return null;
         }
+
+        LocalDateTime kstTime = LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(file.getCreatedTime().getValue()), zoneId
+        );
+
         return FileUploadTable.builder()
                 .orgSaaS(orgSaas)
                 .saasFileId(file.getId())
                 .hash(hash)
                 .deleted(false)
-                .timestamp(LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(file.getCreatedTime().getValue()),
-                                ZoneId.systemDefault()))
+                .timestamp(kstTime)
                 .build();
     }
 
@@ -65,8 +70,11 @@ public class DriveFileMapper {
         LocalDateTime eventTs = null;
         if (createdTime != null) {
             eventTs = LocalDateTime.ofInstant(
-                    Instant.ofEpochMilli(createdTime.getValue()), ZoneId.systemDefault()
+                    Instant.ofEpochMilli(file.getCreatedTime().getValue()), zoneId
             );
+        } else {
+            log.warn("File created time is null. Using current time instead.");
+            eventTs = LocalDateTime.now(zoneId);
         }
 
         // eventType null 체크
