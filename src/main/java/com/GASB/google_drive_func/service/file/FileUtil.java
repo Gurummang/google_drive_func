@@ -252,7 +252,7 @@ public class FileUtil {
             log.error("StoredFile object is null");
             return null;
         }
-        FileUploadTable fileUploadTableObj = driveFileMapper.toFileUploadEntity(file, orgSaaSObject, hash);
+        FileUploadTable fileUploadTableObj = driveFileMapper.toFileUploadEntity(file, orgSaaSObject, hash, event_type.equals("file_change"));
         if (fileUploadTableObj == null){
             log.error("FileUploadTable object is null");
             return null;

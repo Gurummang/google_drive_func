@@ -30,8 +30,6 @@ public class DriveFileMapper {
     private final FileUploadRepository fileUploadRepository;
 
     private final ZoneId zoneId = ZoneId.of("Asia/Seoul");
-    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
     public StoredFile toStoredFileEntity(File file, String hash, String filePath) {
         if (file == null) {
             return null;
@@ -44,14 +42,18 @@ public class DriveFileMapper {
                 .build();
     }
 
-    public FileUploadTable toFileUploadEntity(File file, OrgSaaS orgSaas, String hash) {
+    public FileUploadTable toFileUploadEntity(File file, OrgSaaS orgSaas, String hash, boolean isModified) {
         if (file == null) {
             return null;
         }
-
-        LocalDateTime kstTime = LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(file.getCreatedTime().getValue()), zoneId
-        );
+        LocalDateTime kstTime = null;
+        if (isModified) {
+            kstTime = LocalDateTime.ofInstant(
+                    Instant.ofEpochMilli(file.getModifiedTime().getValue()), zoneId
+            ).withNano(0);
+        } else {
+            LocalDateTime.ofInstant(Instant.ofEpochMilli(file.getCreatedTime().getValue()), zoneId).withNano(0);
+        }
         log.info("kstTime : {}", kstTime);
 
         return FileUploadTable.builder()
