@@ -1,9 +1,12 @@
 package com.GASB.google_drive_func.controller;
 
+import com.GASB.google_drive_func.model.repository.channel.GooglePageTokenRepo;
+import com.GASB.google_drive_func.model.repository.org.OrgSaaSRepo;
 import com.GASB.google_drive_func.model.repository.org.WorkspaceConfigRepo;
 import com.GASB.google_drive_func.service.DriveApiService;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
 import com.GASB.google_drive_func.service.event.GoogleDriveEvent;
+import com.GASB.google_drive_func.service.file.DriveFileService;
 import com.google.api.services.drive.Drive;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.jdbc.Work;
@@ -23,15 +26,22 @@ public class DriveEventController {
     private final GoogleUtil googleUtil;
     private final DriveApiService driveApiService;
     private final WorkspaceConfigRepo workspaceConfigRepo;
-
+    private final GooglePageTokenRepo googlePageTokenRepo;
+    private final DriveFileService driveFileService;
+    private final OrgSaaSRepo orgSaaSRepo;
     private final String defaultUrl = "https://back.grummang.com/webhook/GoogleDrive/";
     @Autowired
     public DriveEventController(GoogleDriveEvent googleDriveEvent, GoogleUtil googleUtil,
-                                DriveApiService driveApiService, WorkspaceConfigRepo workspaceConfigRepo) {
+                                DriveApiService driveApiService, WorkspaceConfigRepo workspaceConfigRepo,
+                                GooglePageTokenRepo googlePageTokenRepo, DriveFileService driveFileService,
+                                OrgSaaSRepo orgSaaSRepo) {
         this.googleDriveEvent = googleDriveEvent;
         this.googleUtil = googleUtil;
         this.driveApiService = driveApiService;
         this.workspaceConfigRepo = workspaceConfigRepo;
+        this.googlePageTokenRepo = googlePageTokenRepo;
+        this.driveFileService = driveFileService;
+        this.orgSaaSRepo = orgSaaSRepo;
     }
     @PostMapping("/file-change")
     public ResponseEntity<String> handleFileChangedEvent(@RequestBody Map<String, Object> payload) throws Exception {
@@ -42,6 +52,11 @@ public class DriveEventController {
         int workspaceId = workspaceConfigRepo.getWorkspaceConfigId(webhookUrl);
         Drive service = googleUtil.getDriveService(workspaceId);
         String channel_id = payload.get("channelId").toString();
+        String dirve_id = orgSaaSRepo.getSpaceID(workspaceId);
+        if (!googlePageTokenRepo.existsByChannelId(channel_id)){
+            driveFileService.deleteAllWatch(workspaceId, channel_id, dirve_id);
+            return ResponseEntity.ok("This event receive from Unsubscribed channel");
+        }
 
         List<Map<String,String>> event_detail = driveApiService.getFileDetails(service,channel_id);
         log.info("Event Detail: {}", event_detail);

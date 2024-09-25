@@ -6,12 +6,12 @@ import com.GASB.google_drive_func.model.repository.org.OrgSaaSRepo;
 import com.GASB.google_drive_func.model.repository.org.WorkspaceConfigRepo;
 import com.GASB.google_drive_func.model.repository.user.MonitoredUserRepo;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
-import com.GASB.google_drive_func.service.DriveApiService;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
+import lombok.extern.slf4j.Slf4j;
 
-import java.util.Map;
 
+@Slf4j
 public class GoogleDriveEventObject {
 
     private final int workspaceId;
@@ -28,6 +28,7 @@ public class GoogleDriveEventObject {
     private final GoogleUtil googleUtil;
 
     // 정적 팩토리 메서드로 payload를 처리하는 생성 방식 추가
+
     public static GoogleDriveEventObject fromPayload(int workspaceId, WorkspaceConfigRepo workspaceConfigRepo,
                                                      OrgSaaSRepo orgSaaSRepo, DriveApiService driveApiService,
                                                      MonitoredUserRepo monitoredUserRepo, GoogleUtil googleUtil, String file_id) throws Exception {
@@ -42,6 +43,9 @@ public class GoogleDriveEventObject {
         String lastModifiedUser = file.getLastModifyingUser().getEmailAddress();
         MonitoredUsers monitoredUser = monitoredUserRepo.findByEmail(lastModifiedUser).orElse(null);
 
+        // 전체 로깅
+        log.info("GoogleDriveEventObject created: workspaceId={}, orgSaasObj={}, service={}, file={}, monitoredUser={}",
+                workspaceId, orgSaasObj, service, file, monitoredUser);
         // 객체 생성 및 반환
         return new GoogleDriveEventObject(workspaceId, orgSaasObj, service, file, monitoredUser,
                 workspaceConfigRepo, orgSaaSRepo, driveApiService, monitoredUserRepo, googleUtil);

@@ -9,6 +9,7 @@ import com.GASB.google_drive_func.model.repository.org.WorkspaceConfigRepo;
 import com.GASB.google_drive_func.model.repository.user.MonitoredUserRepo;
 import com.GASB.google_drive_func.service.DriveApiService;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.Channel;
 import com.google.api.services.drive.model.File;
@@ -111,46 +112,48 @@ public class DriveFileService {
                 "application/vnd.google-apps.presentation".equalsIgnoreCase(file.getMimeType());  // Google Slides
     }
 
-    public void deleteAllWatch() throws Exception {
+    public void deleteAllWatch(int workspaceId, String channelId, String driveId) throws Exception {
         // 드라이브 서비스 가져오기
-        Drive service = googleUtil.getDriveService(231);
+        Drive service = googleUtil.getDriveService(workspaceId);
 
         // null 체크
         if (service == null) {
-            throw new Exception("Drive service is null");
+            throw new IllegalArgumentException("Drive service is null for workspace ID: " + workspaceId);
         }
 
-        // 채널 ID 리스트 초기화
-        List<String> channelIds = new ArrayList<>();
-        channelIds.add("19f9a220-782a-4a45-8c8f-4c0d3927d3df");
-
-        // 리소스 ID 설정
-        String resourceId = "8v4U7LlTVAH2h60NhO4RybdKoAY";
-
-        // 채널 ID 리스트가 비어 있는지 확인
-        if (channelIds.isEmpty()) {
-            System.out.println("No channels to stop.");
-            return;
+        if (channelId == null || channelId.isEmpty()) {
+            throw new IllegalArgumentException("Channel ID must not be null or empty");
         }
 
-        // 각 채널에 대해 중지 작업 수행
-        for (String channelId : channelIds) {
-            if (channelId != null && !channelId.isEmpty()) {
-                try {
-                    // 채널 중지 메소드 호출
-                    Channel channel = new Channel();
-                    channel.setId(channelId);
-                    channel.setResourceId(resourceId);
+        if (driveId == null || driveId.isEmpty()) {
+            throw new IllegalArgumentException("Drive ID must not be null or empty");
+        }
 
-                    service.channels().stop(channel).execute();
-                    System.out.println("Successfully stopped channel: " + channelId);
-                } catch (IOException e) {
-                    // 예외 발생 시 로깅
-                    System.err.println("Failed to stop channel: " + channelId + ", reason: " + e.getMessage());
-                }
-            } else {
-                System.out.println("Invalid channelId: " + channelId);
-            }
+        try {
+            // 채널 설정 및 삭제 요청
+            Channel channel = new Channel();
+            channel.setId(channelId);
+            channel.setResourceId(driveId);
+
+            service.channels().stop(channel).execute();
+
+            // 성공 로그
+            log.info("Successfully stopped channel");
+
+        } catch (GoogleJsonResponseException e) {
+            // Google API 호출 시 발생할 수 있는 예외 처리
+            log.error("Google API error while stopping channel: {}", e.getDetails(), e);
+            throw new Exception("Failed to stop the channel due to Google API error", e);
+
+        } catch (IOException e) {
+            // IO 오류 처리
+            log.error("I/O error while stopping channel: {}", e.getMessage(), e);
+            throw new Exception("Failed to stop the channel due to an I/O error", e);
+
+        } catch (Exception e) {
+            // 기타 예외 처리
+            log.error("Unexpected error while stopping channel: {}", e.getMessage(), e);
+            throw new Exception("Failed to stop the channel due to an unexpected error", e);
         }
     }
 
