@@ -1,24 +1,23 @@
 package com.GASB.google_drive_func.service;
 
+import com.GASB.google_drive_func.model.entity.GooglePageToken;
 import com.GASB.google_drive_func.model.entity.OrgSaaS;
 import com.GASB.google_drive_func.model.repository.channel.GooglePageTokenRepo;
 import com.GASB.google_drive_func.model.repository.files.FileActivityRepo;
 import com.GASB.google_drive_func.model.repository.org.OrgSaaSRepo;
 import com.GASB.google_drive_func.service.GoogleUtil.GoogleUtil;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.client.util.DateTime;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.*;
-import com.rometools.utils.IO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -124,12 +123,11 @@ public class DriveApiService {
     public List<Map<String,String>> getFileDetails(Drive service, String channel_id) throws IOException {
 
         List<Map<String,String>> response_list = new ArrayList<>();
-
-        int org_saas_id = googlePageTokenRepo.findByChannelId(channel_id);
-        OrgSaaS orgSaaSObj = orgSaaSRepo.findById(org_saas_id).orElseThrow(() -> new IllegalStateException("Workspace not found"));
+        GooglePageToken pageTokenObj = googlePageTokenRepo.findObjByChannelId(channel_id).orElseThrow(() -> new IllegalStateException("Page Token not found"));
+        OrgSaaS orgSaaSObj = pageTokenObj.getOrgSaaS();
 
         // 페이지 토큰 추출
-        String pageToken = googlePageTokenRepo.getPageTokenByChannelId(channel_id).orElse(null);
+        String pageToken = pageTokenObj.getPageToken();
         if (pageToken == null) {
             log.error("Page token not found for channel ID: {}", channel_id);
             return null;
@@ -158,14 +156,21 @@ public class DriveApiService {
             log.info("Change: {}", change);
             if (change.getChangeType()!=null && change.getChangeType().equals("drive")){
                 log.info("Change Event is not file, detail : {}", change.getChangeType());
-                if (isDuplicateLog(change)){
-                    log.info("Duplicate log: {}", change.getFileId());
-                    continue;
+                if (pageTokenObj.getLastAccessTime() != null){
+                    if (isDuplicateLog(change, pageTokenObj.getLastAccessTime())){
+                        log.info("Duplicate log: {}", change.getFileId());
+                        continue;
+                    }
                 }
                 continue;
             }
-            String event_Type = decideType(change);
+            // 중복 로그가 아니라면 마지막 엑세스 시간 업데이트
+            googlePageTokenRepo.updateLastAccessTimeByChannelId(channel_id);
+
+            String event_Type = decideType(change, service);
+
             String file_id = change.getFileId();
+            log.info("Successfully decided type: {}, file_id : {}", event_Type, file_id);
             if (event_Type != null){
                 response.put("eventType",event_Type);
                 response.put("fileId",file_id);
@@ -191,7 +196,7 @@ public class DriveApiService {
         return response_list;
     }
 
-    private boolean isDuplicateLog(Change changeFile) {
+    private boolean isDuplicateLog(Change changeFile, LocalDateTime lastAccessTime) {
         if (changeFile.getTime() == null) {
             // 시간 정보가 없는 경우 처리
             return false; // 또는 적절한 기본값 반환
@@ -208,21 +213,19 @@ public class DriveApiService {
         ZonedDateTime now = ZonedDateTime.now(koreaZoneId);
         log.info("Current time: {}", now);
 
-        // 두 시간 사이의 차이를 초 단위로 계산
-        long secondsBetween = ChronoUnit.SECONDS.between(changeTime, now);
-        log.info("Seconds between: {}", secondsBetween);
+        // lastAccessTime을 한국 시간으로 변경
+        ZonedDateTime lastAccess = lastAccessTime.atZone(koreaZoneId);
+        log.info("Last access time: {}", lastAccess);
+
+        // 로그에 있는 시간과 마지막 엑세스 시간 비교
+        long secondsBetween = ChronoUnit.SECONDS.between(changeTime, lastAccess);
 
         // 30초 이내인지 확인
         return secondsBetween >= 30;
     }
 
 
-    private String decideType(Change changeFile) {
-        log.info("isRemoved: {}", changeFile.getRemoved());
-        log.info("isTrashed: {}", changeFile.getFile().getTrashed());
-        if (Boolean.TRUE.equals(changeFile.getRemoved()) || Boolean.TRUE.equals(changeFile.getFile().getTrashed())) {
-            return "delete";
-        }
+    private String decideType(Change changeFile, Drive service) throws IOException {
         // 파일 추가 or 파일 변경(수정)
         if (changeFile.getFile() == null) {
             log.error("File is null.");
@@ -230,9 +233,30 @@ public class DriveApiService {
         }
 
         if (fileActivityRepo.existsBySaaSFileId(changeFile.getFileId())) {
-            return "update";
+            if (Boolean.TRUE.equals(changeFile.getRemoved()) || Boolean.TRUE.equals(isFileTrashed(changeFile.getFileId(), service))) {
+                return "delete";
+            } else {
+                return "update";
+            }
         } else {
             return "create";
+        }
+    }
+
+    private boolean isFileTrashed(String fileId, Drive service) throws IOException {
+        try {
+            File file = service.files().get(fileId)
+                    .setSupportsAllDrives(true)
+                    .setFields("trashed")
+                    .execute();
+            return file.getTrashed();
+        } catch (GoogleJsonResponseException e) {
+            if (e.getStatusCode() == 404) {
+                log.warn("File not found: {}", fileId);
+                return false;
+            }
+            log.error("Error checking if file {} is trashed: {}", fileId, e.getDetails().getMessage());
+            throw e;
         }
     }
 }
