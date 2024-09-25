@@ -57,6 +57,8 @@
 
 package com.GASB.google_drive_func.tlsh;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.Arrays;
 
 /**
@@ -79,6 +81,7 @@ import java.util.Arrays;
  * System.out.println("Hash is " + hash.getEncoded());
  * </pre>
  */
+@Slf4j
 public class TlshCreator {
 	private static final int SLIDING_WND_SIZE = 5;
 	private static final int BUCKETS = 256;
@@ -477,10 +480,16 @@ public class TlshCreator {
 		int q1ratio = (int) ((float) (q1 * 100.0f) / (float) q3) & 0xF;
 		int q2ratio = (int) ((float) (q2 * 100.0f) / (float) q3) & 0xF;
 
+
+
 		if (checksumLength == 1) {
 			return new Tlsh(version, new int[] {checksum}, lvalue, q1ratio, q2ratio, tmp_code);
 		} else {
-			return new Tlsh(version, checksumArray.clone(), lvalue, q1ratio, q2ratio, tmp_code);
+			if (this.checksumArray!=null){
+				return new Tlsh(version, checksumArray.clone(), lvalue, q1ratio, q2ratio, tmp_code);
+			} else {
+				throw new IllegalStateException("TLSH checksumArray is null, cannot generate hash");
+			}
 		}
 	}
 
