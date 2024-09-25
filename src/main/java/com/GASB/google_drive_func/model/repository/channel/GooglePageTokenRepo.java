@@ -16,6 +16,9 @@ import java.util.Optional;
 public interface GooglePageTokenRepo extends JpaRepository<GooglePageToken, Long> {
 
 
+    @Query("SELECT g FROM GooglePageToken g WHERE g.channelId = :channelId")
+    Optional<GooglePageToken> findObjByChannelId(@Param("channelId")String channelId);
+
     @Query("SELECT g.pageToken FROM GooglePageToken g WHERE g.channelId = :channelId")
     Optional<String> getPageTokenByChannelId(@Param("channelId") String channelId);
 
@@ -26,5 +29,11 @@ public interface GooglePageTokenRepo extends JpaRepository<GooglePageToken, Long
 
     @Query("SELECT g.orgSaaS.id FROM GooglePageToken g WHERE g.channelId = :channelId")
     int findByChannelId(@Param("channelId") String channelId);
+
+    @Transactional
+    @Modifying
+    @Query("UPDATE GooglePageToken g SET g.lastAccessTime = CURRENT_TIMESTAMP WHERE g.channelId = :channelId")
+    void updateLastAccessTimeByChannelId(@Param("channelId") String channelId);
+
 
 }
