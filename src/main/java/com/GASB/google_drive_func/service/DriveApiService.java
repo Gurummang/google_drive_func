@@ -156,9 +156,12 @@ public class DriveApiService {
         for (Change change : changeList.getChanges()){
             Map<String,String> response = new HashMap<>();
             log.info("Change: {}", change);
-            if (isDuplicateLog(change) || change.getChangeType().equals("drive")){
-                log.info("Change Event is dir or duplicate log: {}", change.getChangeType());
-                log.info("Duplicate log: {}", change.getFileId());
+            if (change.getChangeType()!=null && change.getChangeType().equals("drive")){
+                log.info("Change Event is not file, detail : {}", change.getChangeType());
+                if (isDuplicateLog(change)){
+                    log.info("Duplicate log: {}", change.getFileId());
+                    continue;
+                }
                 continue;
             }
             String event_Type = decideType(change);
@@ -215,6 +218,8 @@ public class DriveApiService {
 
 
     private String decideType(Change changeFile) {
+        log.info("isRemoved: {}", changeFile.getRemoved());
+        log.info("isTrashed: {}", changeFile.getFile().getTrashed());
         if (Boolean.TRUE.equals(changeFile.getRemoved()) || Boolean.TRUE.equals(changeFile.getFile().getTrashed())) {
             return "delete";
         }
