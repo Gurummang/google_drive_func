@@ -130,6 +130,10 @@ public class FileUtil {
 
         final int BUFFER_SIZE = 4096;
         TlshCreator tlshCreator = new TlshCreator();
+        if (tlshCreator == null) {
+            log.error("TLSH creator is null");
+            return null;
+        }
 
         try (InputStream is = new ByteArrayInputStream(fileData)) {
             byte[] buf = new byte[BUFFER_SIZE];
@@ -144,12 +148,7 @@ public class FileUtil {
         }
 
         try {
-            Tlsh hash = tlshCreator.getHash();
-            if (hash == null) {
-                log.warn("TLSH hash is null, calculation may have failed");
-                return null;
-            }
-            return hash;
+            return tlshCreator.getHash();
         } catch (IllegalStateException e) {
             log.warn("TLSH not valid; either not enough data or data has too little variance");
             return null; // TLSH 계산 실패 시 null 반환
