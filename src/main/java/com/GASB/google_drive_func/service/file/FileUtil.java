@@ -109,7 +109,8 @@ public class FileUtil {
         if (parents==null){
             return buildPath(file, SaaSName, orgName, DriveName, new ArrayList<>());
         }
-        List<String> tmpArray = new ArrayList<>(parents);
+        List<String> tmpArray = new ArrayList<>(parents.size());
+        Collections.copy(tmpArray, parents);
         tmpArray.add(hash);
 
         return buildPath(file, SaaSName, orgName, DriveName, tmpArray);
@@ -119,7 +120,8 @@ public class FileUtil {
         if (parents==null){
             return buildPath(file, SaaSName, orgName, DriveName, new ArrayList<>());
         }
-        List<String> tmpArray = new ArrayList<>(parents);
+        List<String> tmpArray = new ArrayList<>(parents.size());
+        Collections.copy(tmpArray, parents);
         return buildPath(file, SaaSName, orgName, DriveName, tmpArray);
     }
 

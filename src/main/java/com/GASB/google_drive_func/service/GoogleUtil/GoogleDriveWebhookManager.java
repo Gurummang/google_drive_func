@@ -63,7 +63,7 @@ public class GoogleDriveWebhookManager {
                 .setId(channelId)
                 .setType("web_hook")
                 .setAddress(webhookUrl)
-                .setExpiration(System.currentTimeMillis() + 60 * 60 * 1000L); // 1 hour from now
+                .setExpiration(System.currentTimeMillis() +  7 * 24 * 60 * 60 * 1000L); // 1 hour from now
 
 
 
