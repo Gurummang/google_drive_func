@@ -31,6 +31,9 @@ public interface FileUploadRepository extends JpaRepository<FileUploadTable, Lon
     @Query("SELECT fu FROM FileUploadTable fu WHERE fu.hash = :file_hash AND fu.id = :idx")
     Optional<FileUploadTable> findByIdAndFileHash(@Param("idx") int idx, @Param("file_hash")String file_hash);
 
+    @Query("SELECT fu FROM FileUploadTable fu WHERE fu.id = :idx")
+    Optional<FileUploadTable> findById(@Param("idx")int idx);
+
 
     @Query("SELECT fu.hash FROM FileUploadTable fu WHERE fu.saasFileId = :saas_file_id")
     Optional<String> findFileHashByFileId(@Param("saas_file_id")String file_id);
