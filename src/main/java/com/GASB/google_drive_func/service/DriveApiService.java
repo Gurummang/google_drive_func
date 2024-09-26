@@ -86,7 +86,7 @@ public class DriveApiService {
             return service.permissions().list(DriveId)
                     .setSupportsAllDrives(true)
                     .setUseDomainAdminAccess(true)
-                    .setFields("permissions(id,emailAddress,displayName,role)")
+                    .setFields("permissions(id,emailAddress,displayName,role, deleted)")
                     .execute();
         } catch (IOException e) {
             log.error("Error fetching users: {}", e.getMessage());

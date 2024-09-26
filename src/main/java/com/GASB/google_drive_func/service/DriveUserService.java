@@ -47,13 +47,15 @@ public class DriveUserService {
 
                 String spaceId = orgSaaSRepo.getSpaceID(workspaceId);
                 PermissionList permissionList = driveApiService.fetchUser(service, spaceId);
-
+                log.info("Permission list: {}", permissionList);
                 if (permissionList != null && !permissionList.isEmpty()) {
                     for (Permission permission : permissionList.getPermissions()) {
-                        if (permission.getEmailAddress() != null) {
+                        if (permission.getEmailAddress() != null && Boolean.FALSE.equals(permission.getDeleted())) {
                             MonitoredUsers user = driveUserMapper.toEntity(permission, orgSaaSObject);
-                            if (!monitoredUserRepo.existsByUserId(permission.getId(), Objects.requireNonNull(orgSaaSObject).getId())) {
-                                monitoredUserRepo.save(user);
+                            synchronized (this){
+                                if (!monitoredUserRepo.existsByUserId(permission.getId(), Objects.requireNonNull(orgSaaSObject).getId())) {
+                                    monitoredUserRepo.save(user);
+                                }
                             }
                         }
                     }
