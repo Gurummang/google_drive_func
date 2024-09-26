@@ -165,9 +165,9 @@ public class DriveBoardController {
 
     @PostMapping("/files/delete")
     @ValidateJWT
-    public ResponseEntity<?> deleteFile(HttpServletRequest servletRequest, @RequestBody Map<String, String> request) {
-        // 아마 delete에는 해시값이 필요하지 않을까..?
+    public ResponseEntity<?> deleteFiles(HttpServletRequest servletRequest, @RequestBody List<Map<String, String>> requests) {
         try {
+            // JWT 인증 오류 처리
             if (servletRequest.getAttribute("error") != null) {
                 String errorMessage = (String) servletRequest.getAttribute("error");
                 Map<String, String> errorResponse = new HashMap<>();
@@ -176,30 +176,52 @@ public class DriveBoardController {
                 errorResponse.put("error_message", errorMessage);
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
             }
-            int fileUploadTableIdx = Integer.parseInt(request.get("id"));
-            String file_hash = request.get("file_hash");
+
             Map<String, String> response = new HashMap<>();
-            if (driveFileService.fileDelete(fileUploadTableIdx,file_hash)){
-                response.put("status","200");
-                response.put("message","file deleted successful");
+            boolean allSuccess = true;
+            List<Map<String, String>> failedFiles = new ArrayList<>();
+
+            // 요청받은 파일 목록 처리
+            for (Map<String, String> request : requests) {
+                try {
+                    int fileUploadTableIdx = Integer.parseInt(request.get("id"));
+                    String fileHash = request.get("file_hash");
+                    String fileName = request.get("file_name");
+                    String filePath = request.get("path");
+
+                    // 파일 삭제 시도
+                    if (!driveFileService.fileDelete(fileUploadTableIdx, fileHash,fileName ,filePath)) {
+                        allSuccess = false;
+                        log.error("Failed to delete file with id: {}, hash: {}", fileUploadTableIdx, fileHash);
+                        Map<String, String> failedFile = new HashMap<>();
+                        failedFile.put("id", String.valueOf(fileUploadTableIdx));
+                        failedFile.put("file_hash", fileHash);
+                        failedFiles.add(failedFile);
+                    }
+                } catch (Exception e) {
+                    log.error("Error deleting file", e);
+                    allSuccess = false;
+                }
+            }
+
+            // 전체 성공 여부에 따른 응답
+            if (allSuccess) {
+                response.put("status", "200");
+                response.put("message", "All files deleted successfully");
             } else {
-                response.put("status","404");
-                response.put("message","file deleted failed");
+                response.put("status", "404");
+                response.put("message", "Some files failed to delete");
+                response.put("failed_files", failedFiles.toString()); // 실패한 파일 정보 포함
             }
 
             return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e){
-            Map<String, String> response = new HashMap<>();
-            response.put("status","500");
-            response.put("message","file deleted failed");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("status","500");
-            response.put("message","file deleted failed");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        } catch (RuntimeException e) {
+            log.error("Error deleting files", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("message", "Internal server error"));
         }
     }
+
 
 
 }
