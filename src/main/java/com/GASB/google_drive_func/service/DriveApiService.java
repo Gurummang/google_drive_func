@@ -104,13 +104,7 @@ public class DriveApiService {
         try {
             Drive service = googleUtil.getDriveService(id);
 
-            // 파일 권한 확인
-            File file = service.files().get(driveFileId).setFields("capabilities").execute();
-            if (!file.getCapabilities().getCanDelete()) {
-                log.warn("No permission to delete file: " + driveFileId);
-                return false;
-            }
-            if (!isFileExist(driveFileId, service)) {
+            if (Boolean.FALSE.equals(isFileExist(driveFileId, service))) {
                 log.warn("File not found: " + driveFileId);
                 return false;
             } else {
@@ -135,7 +129,12 @@ public class DriveApiService {
 
     private boolean isFileExist(String fileId, Drive service) {
         try {
-            service.files().get(fileId).setSupportsAllDrives(true).execute();
+
+            File file = service.files().get(fileId).setSupportsAllDrives(true).execute();
+            if (file == null) {
+                log.warn("File not found: {}", fileId);
+                return false;
+            }
             return true;
         } catch (GoogleJsonResponseException e) {
             if (e.getStatusCode() == 404) {
