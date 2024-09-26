@@ -86,6 +86,8 @@ public class DriveFileService {
                 List<File> fileList = driveApiService.fetchFiles(service, spaceId).getFiles();
 
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
+                log.info("Processing {} files", fileList.size());
+                log.info("FileList : {}", fileList);
                 for (File file : fileList) {
                     if (shouldSkipFile(file)) {
                         log.info("Skipping unsupported file: {}, {}", file.getId(), file.getName());
