@@ -52,7 +52,7 @@ public class DriveFileMapper {
                     Instant.ofEpochMilli(file.getModifiedTime().getValue()), zoneId
             ).withNano(0);
         } else {
-            LocalDateTime.ofInstant(Instant.ofEpochMilli(file.getCreatedTime().getValue()), zoneId).withNano(0);
+            kstTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(file.getCreatedTime().getValue()), zoneId).withNano(0);
         }
         log.info("kstTime : {}", kstTime);
 
