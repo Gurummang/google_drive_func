@@ -106,13 +106,21 @@ public class FileUtil {
 
     public String getFullPath(File file, String SaaSName, String orgName, String hash, String DriveName, List<String> parents) {
         // 해시 값을 경로에 추가
-        parents.add(hash);
+        if (parents==null){
+            return buildPath(file, SaaSName, orgName, DriveName, new ArrayList<>());
+        }
+        List<String> tmpArray = new ArrayList<>(parents);
+        tmpArray.add(hash);
 
-        return buildPath(file, SaaSName, orgName, DriveName, parents);
+        return buildPath(file, SaaSName, orgName, DriveName, tmpArray);
     }
 
     public String getDisplayPath(File file, String SaaSName, String orgName, String DriveName, List<String> parents) {
-        return buildPath(file, SaaSName, orgName, DriveName, parents);
+        if (parents==null){
+            return buildPath(file, SaaSName, orgName, DriveName, new ArrayList<>());
+        }
+        List<String> tmpArray = new ArrayList<>(parents);
+        return buildPath(file, SaaSName, orgName, DriveName, tmpArray);
     }
 
 
@@ -256,7 +264,9 @@ public class FileUtil {
         String OrgName = orgSaaSObject.getOrg().getOrgName();
         List<String> parentsList = getParentId(file, service);
         String s3UploadPath = getFullPath(file, saasname, OrgName, hash, workspaceName, parentsList);
+        log.info("File path: {}", s3UploadPath);
         String savedPath = getDisplayPath(file, saasname, OrgName, workspaceName, parentsList);
+        log.info("File saved path: {}", savedPath);
         String filePath = BASE_PATH.resolve(file.getName()).toString();
 
 
