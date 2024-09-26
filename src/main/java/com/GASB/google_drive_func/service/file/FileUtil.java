@@ -66,40 +66,56 @@ public class FileUtil {
     @Value("${aws.s3.bucket}")
     private String bucketName;
 
-    public String getFullPath(File file, String SaaSName, String orgName, String hash,String DriveName, Drive driveService) {
-        List<String> pathParts = new ArrayList<>();
+    private List<String> getParentId(File file, Drive service) {
+        List<String> parents = new ArrayList<>();
         String parentId = file.getParents() != null && !file.getParents().isEmpty() ? file.getParents().get(0) : null;
 
         while (parentId != null) {
             try {
-                File parentFile = driveService.files().get(parentId)
+                File parentFile = service.files().get(parentId)
                         .setFields("id, name, parents")
                         .setSupportsAllDrives(true)
                         .execute();
                 log.info("Parent file: {}", parentFile);
-                pathParts.add(0, parentFile.getName());
+                parents.add(0, parentFile.getName());  // 상위 경로 이름을 맨 앞에 추가
                 parentId = parentFile.getParents() != null && !parentFile.getParents().isEmpty() ? parentFile.getParents().get(0) : null;
             } catch (IOException e) {
                 log.error("Failed to get parent file", e);
                 break;
             }
         }
-
-        // 해시값을 경로에 추가
-        pathParts.add(hash);
-
-        // 파일 이름을 경로에 추가
-        pathParts.add(file.getName());
-
-        // "Drive"를 DriveName으로 변경
-        pathParts.set(pathParts.indexOf("Drive"), DriveName);
-        // 드라이브 이름을 맨 앞에 추가
-        pathParts.add(0, SaaSName);
-
-        pathParts.add(0, orgName);
-
-        return String.join("/", pathParts);
+        return parents;
     }
+
+    private String buildPath(File file, String SaaSName, String orgName, String DriveName, List<String> parents) {
+        // 파일 이름을 경로에 추가
+        parents.add(file.getName());
+
+        // "Drive" 문자열이 존재하면 DriveName으로 변경
+        int driveIndex = parents.indexOf("Drive");
+        if (driveIndex != -1) {
+            parents.set(driveIndex, DriveName);
+        }
+
+        // 드라이브 이름과 조직명을 맨 앞에 추가
+        parents.add(0, SaaSName);
+        parents.add(0, orgName);
+
+        return String.join("/", parents);
+    }
+
+    public String getFullPath(File file, String SaaSName, String orgName, String hash, String DriveName, List<String> parents) {
+        // 해시 값을 경로에 추가
+        parents.add(hash);
+
+        return buildPath(file, SaaSName, orgName, DriveName, parents);
+    }
+
+    public String getDisplayPath(File file, String SaaSName, String orgName, String DriveName, List<String> parents) {
+        return buildPath(file, SaaSName, orgName, DriveName, parents);
+    }
+
+
     private static String bytesToHex(byte[] bytes) {
         StringBuilder hexString = new StringBuilder(2 * bytes.length);
         for (byte b : bytes) {
@@ -238,7 +254,9 @@ public class FileUtil {
 
         String saasname = orgSaaSObject.getSaas().getSaasName();
         String OrgName = orgSaaSObject.getOrg().getOrgName();
-        String savedPath = getFullPath(file, saasname, OrgName, hash, workspaceName, service);
+        List<String> parentsList = getParentId(file, service);
+        String s3UploadPath = getFullPath(file, saasname, OrgName, hash, workspaceName, parentsList);
+        String savedPath = getDisplayPath(file, saasname, OrgName, workspaceName, parentsList);
         String filePath = BASE_PATH.resolve(file.getName()).toString();
 
 
@@ -247,7 +265,7 @@ public class FileUtil {
             log.error("User not found in MonitoredUsers: {}", file.getLastModifyingUser().getPermissionId());
             return null;
         }
-        StoredFile storedFileObj = driveFileMapper.toStoredFileEntity(file, hash, savedPath);
+        StoredFile storedFileObj = driveFileMapper.toStoredFileEntity(file, hash, s3UploadPath);
         if (storedFileObj == null){
             log.error("StoredFile object is null");
             return null;
