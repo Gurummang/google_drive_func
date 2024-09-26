@@ -100,26 +100,54 @@ public class DriveApiService {
         }
     }
 
-    public boolean DriveFileDeleteApi(int id, String driveFileId) {
+    public boolean DriveFileDeleteApi(int id, String driveFileId) throws IOException {
         try {
-            // Google Drive 파일 삭제 API 호출
             Drive service = googleUtil.getDriveService(id);
-            service.files().delete(driveFileId).execute(); // 파일 ID로 삭제 요청
-            return true; // 삭제 성공 시 true 반환
 
+            if (Boolean.FALSE.equals(isFileExist(driveFileId, service))) {
+                log.warn("File not found: " + driveFileId);
+                return false;
+            } else {
+                log.info("File found: " + driveFileId);
+            }
+            // 파일 삭제 (공유 드라이브 지원 포함)
+            service.files().delete(driveFileId)
+                            .setSupportsAllDrives(true)
+                                    .execute();
+
+            log.info("File deleted successfully: " + driveFileId);
+            return true;
         } catch (GoogleJsonResponseException e) {
-            // Google API 에러 처리
-            log.error("Google Drive API Error: " + e.getDetails().getMessage());
+            log.error("Google Drive API Error: " + e.getDetails().toPrettyString());
             return false;
         } catch (Exception e) {
-            // 네트워크/I/O 에러 처리
             log.error("Error occurred: " + e.getMessage());
             return false;
         }
     }
         // 단일 파일의 변경 상태 조회
 
+    private boolean isFileExist(String fileId, Drive service) {
+        try {
 
+            File file = service.files().get(fileId).setSupportsAllDrives(true).execute();
+            if (file == null) {
+                log.warn("File not found: {}", fileId);
+                return false;
+            }
+            return true;
+        } catch (GoogleJsonResponseException e) {
+            if (e.getStatusCode() == 404) {
+                log.warn("File not found: {}", fileId);
+                return false;
+            }
+            log.error("Error checking if file {} exists: {}", fileId, e.getDetails().getMessage());
+            return false;
+        } catch (IOException e) {
+            log.error("Error checking if file {} exists: {}", fileId, e.getMessage());
+            return false;
+        }
+    }
     public List<Map<String,String>> getFileDetails(Drive service, String channel_id) throws IOException {
 
         List<Map<String,String>> response_list = new ArrayList<>();
