@@ -1,7 +1,9 @@
 package com.GASB.google_drive_func.service.file;
 
+import com.GASB.google_drive_func.model.entity.Activities;
 import com.GASB.google_drive_func.model.entity.FileUploadTable;
 import com.GASB.google_drive_func.model.entity.OrgSaaS;
+import com.GASB.google_drive_func.model.repository.files.FileActivityRepo;
 import com.GASB.google_drive_func.model.repository.files.FileUploadRepository;
 import com.GASB.google_drive_func.model.repository.files.StoredFileRepository;
 import com.GASB.google_drive_func.model.repository.org.OrgSaaSRepo;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -35,11 +38,12 @@ public class DriveFileService {
     public final FileUploadRepository fileUploadRepository;
     public final StoredFileRepository storedFilesRepository;
     public final MonitoredUserRepo monitoredUserRepo;
+    private final FileActivityRepo fileActivityRepo;
     @Autowired
     public DriveFileService(DriveApiService driveApiService, FileUtil fileUtil, OrgSaaSRepo orgSaaSRepo
             , GoogleUtil googleUtil, WorkspaceConfigRepo worekSpaceRepo
             , StoredFileRepository storedFilesRepository, FileUploadRepository fileUploadRepository
-            , MonitoredUserRepo monitoredUserRepo) {
+            , MonitoredUserRepo monitoredUserRepo, FileActivityRepo fileActivityRepo) {
         this.driveApiService = driveApiService;
         this.fileUtil = fileUtil;
         this.orgSaaSRepo = orgSaaSRepo;
@@ -48,22 +52,21 @@ public class DriveFileService {
         this.storedFilesRepository = storedFilesRepository;
         this.fileUploadRepository = fileUploadRepository;
         this.monitoredUserRepo = monitoredUserRepo;
+        this.fileActivityRepo = fileActivityRepo;
     }
 
-    public boolean fileDelete(int idx, String fileHash) {
+    public boolean fileDelete(int idx, String fileHash, String file_name, String file_path) {
         try {
+            if (!checkFile(idx, file_name)) {
+                return false;
+            }
             // 파일 ID와 해시값을 통해 파일 조회
-            FileUploadTable targetFile = fileUploadRepository.findByIdAndFileHash(idx, fileHash).orElse(null);
+            FileUploadTable targetFile = fileUploadRepository.findById(idx).orElse(null);
             if (targetFile == null) {
                 log.error("File not found or invalid: id={}, hash={}", idx, fileHash);
                 return false;
             }
-            // 해당 파일이 Slack 파일인지 확인
-            if (orgSaaSRepo.findSaaSIdById(targetFile.getOrgSaaS().getId()) != 6) {
-                log.error("File is not a Slack file: id={}, saasId={}", idx, targetFile.getOrgSaaS().getId());
-                return false;
-            }
-            // Slack API를 통해 파일 삭제 요청
+            // google drive API를 통해 파일 삭제 요청
             return driveApiService.DriveFileDeleteApi(targetFile.getOrgSaaS().getId(), targetFile.getSaasFileId());
 
         } catch (IllegalArgumentException | NullPointerException e) {
@@ -75,6 +78,21 @@ public class DriveFileService {
         }
     }
 
+    private boolean checkFile(int idx, String file_name){
+
+        FileUploadTable targetFile = fileUploadRepository.findById(idx).orElse(null);
+        Activities targetFileActivity = fileActivityRepo.findBySaasFileId(Objects.requireNonNull(targetFile).getSaasFileId()).orElse(null);
+        String tmp_file_name = Objects.requireNonNull(targetFileActivity).getFileName();
+        if (!tmp_file_name.equals(file_name)) {
+            log.error("File name not matched: id={}, name={}", idx, file_name);
+            return false;
+        }
+        if (orgSaaSRepo.findSaaSIdById(targetFile.getOrgSaaS().getId()) !=6) {
+            log.error("File is not a GoogleDrive file: id={}, saasId={}", idx, targetFile.getOrgSaaS().getId());
+            return false;
+        }
+        return true;
+    }
     @Transactional
     public CompletableFuture<Void> fetchAndStoreFiles(int workspaceId, String eventType) {
         return CompletableFuture.runAsync(() -> {
