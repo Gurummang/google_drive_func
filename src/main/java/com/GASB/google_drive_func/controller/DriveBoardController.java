@@ -198,9 +198,16 @@ public class DriveBoardController {
                         failedFile.put("file_hash", fileHash);
                         failedFiles.add(failedFile);
                     }
+                } catch(NumberFormatException e) {
+                    log.error("Invalid file id", e);
+                    response.put("status", "400");
+                    response.put("message", "Invalid file id");
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
                 } catch (Exception e) {
                     log.error("Error deleting file", e);
-                    allSuccess = false;
+                    response.put("status", "500");
+                    response.put("message", "Internal server error");
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
                 }
             }
 
