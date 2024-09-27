@@ -60,6 +60,9 @@ public class DriveEventController {
 
         List<Map<String,String>> event_detail = driveApiService.getFileDetails(service,channel_id);
         log.info("Event Detail: {}", event_detail);
+        if (event_detail == null){
+            return ResponseEntity.status(500).body("Error in getting file details");
+        }
         for (Map<String,String> detail : event_detail){
             String file_id = detail.get("fileId");
             String event_type = detail.get("eventType");
