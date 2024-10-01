@@ -10,6 +10,7 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,10 +41,10 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.init.routingkey}")
     private String initRoutingKey;
 
-    @Value("${rabbitmq.O365_DELETE_QUEUE}")
-    private String o365DeleteQueue;
-    @Value("${rabbitmq.o365_delete_routing_key}")
-    private String o365DeleteRoutingKey;
+    @Value("${rabbitmq.GOOGLE_DELETE_QUEUE}")
+    private String googleDriveDeleteQueueName;
+    @Value("${rabbitmq.google_delete_routing_key}")
+    private String googleDriveDeleteRoutingKey;
 
 
     //역직렬화 설정
@@ -82,8 +83,8 @@ public class RabbitMQConfig {
 
     // 파일 삭제 메세지 큐 설정
     @Bean
-    public Queue o365DeleteQueue() {
-        return new Queue(o365DeleteQueue, true,false,false);
+    public Queue googleDeleteQueue() {
+        return new Queue(googleDriveDeleteQueueName, true,false,false);
     }
 
 
@@ -107,8 +108,8 @@ public class RabbitMQConfig {
 
     // 파일 삭제 메세지 바인딩 설정
     @Bean
-    public Binding o365DeleteBinding(Queue o365DeleteQueue, DirectExchange exchange) {
-        return BindingBuilder.bind(o365DeleteQueue).to(exchange).with(o365DeleteRoutingKey);
+    public Binding googleDriveDeleteBinding(@Qualifier("googleDeleteQueue") Queue googleDeleteQueue, DirectExchange exchange) {
+        return BindingBuilder.bind(googleDeleteQueue).to(exchange).with(googleDriveDeleteRoutingKey);
     }
 
     // RabbitTemplate 설정 (기본 라우팅 키 사용)
