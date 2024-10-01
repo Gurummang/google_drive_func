@@ -33,11 +33,12 @@ public class MessageReceiver {
     }
 
 
-    @RabbitListener(queues = "${rabbitmq.O365_DELETE_QUEUE}")
+    @RabbitListener(queues = "${rabbitmq.GOOGLE_DELETE_QUEUE}")
     public void receiveDeleteMessage(List<Map<String,String>> message){
         try {
+            log.info("Received message from queue: " + message);
             driveFileService.fileDelete(message);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Error receiving message: {}", e.getMessage());
         }
     }

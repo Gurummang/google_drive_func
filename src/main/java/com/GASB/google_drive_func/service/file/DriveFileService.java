@@ -58,6 +58,7 @@ public class DriveFileService {
 
     public void fileDelete(List<Map<String, String>> requests) {
         // 입력 값 null 체크
+        log.info("Request : {}", requests);
         if (requests == null || requests.isEmpty()) {
             log.error("Request list is null or empty");
             return;
@@ -73,6 +74,7 @@ public class DriveFileService {
 
                 int idx = Integer.parseInt(request.get("id"));
                 String file_name = request.get("file_name");
+                log.info("File ID: {}, File Name: {}", idx, file_name);
 
                 // 파일 체크
                 if (!checkFile(idx, file_name)) {
@@ -107,7 +109,15 @@ public class DriveFileService {
     private boolean checkFile(int idx, String file_name){
 
         FileUploadTable targetFile = fileUploadRepository.findById(idx).orElse(null);
+        if (targetFile == null) {
+            log.error("File not found: id={}, name={}", idx, file_name);
+            return false;
+        }
         Activities targetFileActivity = fileActivityRepo.findBySaasFileId(Objects.requireNonNull(targetFile).getSaasFileId()).orElse(null);
+        if (targetFileActivity == null) {
+            log.error("File activity not found: id={}, name={}", idx, file_name);
+            return false;
+        }
         String tmp_file_name = Objects.requireNonNull(targetFileActivity).getFileName();
         if (!tmp_file_name.equals(file_name)) {
             log.error("File name not matched: id={}, name={}", idx, file_name);
