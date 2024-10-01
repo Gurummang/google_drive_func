@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
@@ -55,33 +56,68 @@ public class DriveFileService {
         this.fileActivityRepo = fileActivityRepo;
     }
 
-    public boolean fileDelete(int idx, String fileHash, String file_name, String file_path) {
-        try {
-            if (!checkFile(idx, file_name)) {
-                return false;
-            }
-            // 파일 ID와 해시값을 통해 파일 조회
-            FileUploadTable targetFile = fileUploadRepository.findById(idx).orElse(null);
-            if (targetFile == null) {
-                log.error("File not found or invalid: id={}, hash={}", idx, fileHash);
-                return false;
-            }
-            // google drive API를 통해 파일 삭제 요청
-            return driveApiService.DriveFileDeleteApi(targetFile.getOrgSaaS().getId(), targetFile.getSaasFileId());
+    public void fileDelete(List<Map<String, String>> requests) {
+        // 입력 값 null 체크
+        log.info("Request : {}", requests);
+        if (requests == null || requests.isEmpty()) {
+            log.error("Request list is null or empty");
+            return;
+        }
 
-        } catch (IllegalArgumentException | NullPointerException e) {
+        try {
+            for (Map<String, String> request : requests) {
+                // 개별 request에 대한 null 체크
+                if (request == null || request.get("id") == null || request.get("file_name") == null) {
+                    log.error("Invalid request: null values detected");
+                    continue; // 해당 요청 건을 건너뜀
+                }
+
+                int idx = Integer.parseInt(request.get("id"));
+                String file_name = request.get("file_name");
+                log.info("File ID: {}, File Name: {}", idx, file_name);
+
+                // 파일 체크
+                if (!checkFile(idx, file_name)) {
+                    log.error("File not found or invalid: id={}, name={}", idx, file_name);
+                    continue; // 해당 요청 건을 건너뜀
+                }
+
+                // 파일 ID와 해시값을 통해 파일 조회
+                FileUploadTable targetFile = fileUploadRepository.findById(idx).orElse(null);
+                if (targetFile == null) {
+                    log.error("File not found with id: {}", idx);
+                    continue; // 파일이 존재하지 않는 경우 다음 루프로 진행
+                }
+
+                // google drive API를 통해 파일 삭제 요청
+                try {
+                    driveApiService.DriveFileDeleteApi(targetFile.getOrgSaaS().getId(), targetFile.getSaasFileId());
+                    log.info("Successfully deleted file: id={}, name={}", idx, file_name);
+                } catch (IOException e) {
+                    log.error("Error deleting file via Google Drive API: id={}, name={}. Exception: {}", idx, file_name, e.getMessage());
+                    throw new RuntimeException("Google Drive API failed", e); // 적절한 예외로 래핑
+                }
+            }
+        } catch (NumberFormatException e) {
+            log.error("Invalid file id format: {}", e.getMessage());
+        } catch (IllegalArgumentException e) {
             log.error("Error deleting file: {}", e.getMessage());
-            return false;
-        } catch (Exception e) {
-            log.error("Error deleting file: {}", e.getMessage());
-            return false;
         }
     }
+
 
     private boolean checkFile(int idx, String file_name){
 
         FileUploadTable targetFile = fileUploadRepository.findById(idx).orElse(null);
+        if (targetFile == null) {
+            log.error("File not found: id={}, name={}", idx, file_name);
+            return false;
+        }
         Activities targetFileActivity = fileActivityRepo.findBySaasFileId(Objects.requireNonNull(targetFile).getSaasFileId()).orElse(null);
+        if (targetFileActivity == null) {
+            log.error("File activity not found: id={}, name={}", idx, file_name);
+            return false;
+        }
         String tmp_file_name = Objects.requireNonNull(targetFileActivity).getFileName();
         if (!tmp_file_name.equals(file_name)) {
             log.error("File name not matched: id={}, name={}", idx, file_name);

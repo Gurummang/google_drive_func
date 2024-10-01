@@ -5,8 +5,12 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,6 +41,26 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.init.routingkey}")
     private String initRoutingKey;
 
+    @Value("${rabbitmq.GOOGLE_DELETE_QUEUE}")
+    private String googleDriveDeleteQueueName;
+    @Value("${rabbitmq.google_delete_routing_key}")
+    private String googleDriveDeleteRoutingKey;
+
+
+    //역직렬화 설정
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
+    @Bean
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(ConnectionFactory connectionFactory,
+                                                                               MessageConverter messageConverter) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(messageConverter);
+        return factory;
+    }
+
     @Bean
     Queue myQueue() {
         return new Queue(initQueueName, true);
@@ -57,6 +81,13 @@ public class RabbitMQConfig {
         return new Queue(groupingQueueName, true, false, false);
     }
 
+    // 파일 삭제 메세지 큐 설정
+    @Bean
+    public Queue googleDeleteQueue() {
+        return new Queue(googleDriveDeleteQueueName, true,false,false);
+    }
+
+
     // 교환기(Exchange) 설정
     @Bean
     DirectExchange exchange() {
@@ -73,6 +104,12 @@ public class RabbitMQConfig {
     @Bean
     Binding groupingQueueBinding(Queue groupingQueue, DirectExchange exchange) {
         return BindingBuilder.bind(groupingQueue).to(exchange).with(groupingRoutingKey);
+    }
+
+    // 파일 삭제 메세지 바인딩 설정
+    @Bean
+    public Binding googleDriveDeleteBinding(@Qualifier("googleDeleteQueue") Queue googleDeleteQueue, DirectExchange exchange) {
+        return BindingBuilder.bind(googleDeleteQueue).to(exchange).with(googleDriveDeleteRoutingKey);
     }
 
     // RabbitTemplate 설정 (기본 라우팅 키 사용)
