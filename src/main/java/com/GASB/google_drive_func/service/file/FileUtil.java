@@ -372,7 +372,7 @@ public class FileUtil {
             return null;
         }
         scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
-        uploadFileToS3(filePath, savedPath);
+        uploadFileToS3(filePath, s3UploadPath);
         return null;
     }
 
