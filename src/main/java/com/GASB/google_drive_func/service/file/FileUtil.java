@@ -106,24 +106,23 @@ public class FileUtil {
 
     public String getFullPath(File file, String SaaSName, String orgName, String hash, String DriveName, List<String> parents) {
         // 해시 값을 경로에 추가
-        if (parents==null){
+        if (parents == null) {
             return buildPath(file, SaaSName, orgName, DriveName, new ArrayList<>());
         }
-        List<String> tmpArray = new ArrayList<>(parents.size());
-        Collections.copy(tmpArray, parents);
-        tmpArray.add(hash);
+        List<String> tmpArray = new ArrayList<>(parents); // parents 리스트 복사
+        tmpArray.add(hash); // 해시 값을 경로에 추가
 
         return buildPath(file, SaaSName, orgName, DriveName, tmpArray);
     }
 
     public String getDisplayPath(File file, String SaaSName, String orgName, String DriveName, List<String> parents) {
-        if (parents==null){
+        if (parents == null) {
             return buildPath(file, SaaSName, orgName, DriveName, new ArrayList<>());
         }
-        List<String> tmpArray = new ArrayList<>(parents.size());
-        Collections.copy(tmpArray, parents);
+        List<String> tmpArray = new ArrayList<>(parents); // parents 리스트 복사
         return buildPath(file, SaaSName, orgName, DriveName, tmpArray);
     }
+
 
 
     private static String bytesToHex(byte[] bytes) {
