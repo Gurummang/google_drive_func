@@ -109,18 +109,18 @@ public class FileUtil {
         if (parents == null) {
             return buildPath(file, SaaSName, orgName, DriveName, new ArrayList<>());
         }
-        List<String> tmpArray = new ArrayList<>(parents); // parents 리스트 복사
-        tmpArray.add(hash); // 해시 값을 경로에 추가
+//        List<String> tmpArray = new ArrayList<>(parents); // parents 리스트 복사
+        parents.add(hash); // 해시 값을 경로에 추가
 
-        return buildPath(file, SaaSName, orgName, DriveName, tmpArray);
+        return buildPath(file, SaaSName, orgName, DriveName, parents);
     }
 
     public String getDisplayPath(File file, String SaaSName, String orgName, String DriveName, List<String> parents) {
         if (parents == null) {
             return buildPath(file, SaaSName, orgName, DriveName, new ArrayList<>());
         }
-        List<String> tmpArray = new ArrayList<>(parents); // parents 리스트 복사
-        return buildPath(file, SaaSName, orgName, DriveName, tmpArray);
+//        List<String> tmpArray = new ArrayList<>(parents); // parents 리스트 복사
+        return buildPath(file, SaaSName, orgName, DriveName, parents);
     }
 
 
@@ -264,9 +264,10 @@ public class FileUtil {
         String saasname = orgSaaSObject.getSaas().getSaasName();
         String OrgName = orgSaaSObject.getOrg().getOrgName();
         List<String> parentsList = getParentId(file, service);
+        List<String> parentsList2 = getParentId(file, service);
         String s3UploadPath = getFullPath(file, saasname, OrgName, hash, workspaceName, parentsList);
         log.info("File path: {}", s3UploadPath);
-        String savedPath = getDisplayPath(file, saasname, OrgName, workspaceName, parentsList);
+        String savedPath = getDisplayPath(file, saasname, OrgName, workspaceName, parentsList2);
         log.info("File saved path: {}", savedPath);
         String filePath = BASE_PATH.resolve(file.getName()).toString();
 
