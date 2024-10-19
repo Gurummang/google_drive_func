@@ -49,25 +49,26 @@ public class DriveInitService {
 
     @Transactional
     public void fetchAndSaveAll(int workspaceId) {
-        CompletableFuture<Void> usersFuture = fetchAndSaveUsers(workspaceId);
-        CompletableFuture<Void> filesFuture = fetchAndSaveFiles(workspaceId);
-
-        // filesFuture이 끝난 이후 웹훅 설정 하도록 함
         try {
-            filesFuture
+            // 1. 유저 정보 비동기 처리
+            CompletableFuture<Void> usersFuture = fetchAndSaveUsers(workspaceId)
+                    // 2. 유저 정보 저장이 끝나면 파일 정보 비동기 처리
+                    .thenCompose(v -> fetchAndSaveFiles(workspaceId))
+                    // 3. 파일 저장이 끝나면 웹훅 설정 비동기 처리
                     .thenCompose(v -> googleDriveWebhookManager.setWebhook(workspaceId))
-                    .thenRun(() -> log.info("Webhook set successfully"))
-                    .thenCombine(usersFuture, (f,u)-> {
-                        log.info("All data fetched and saved successfully");
-                        return null;
-                    })
+                    // 4. 모든 작업 완료 후 로그 출력
+                    .thenRun(() -> log.info("All data fetched, files saved, and webhook set successfully"))
+                    // 예외 처리
                     .exceptionally(e -> {
-                        log.error("Error fetching files, users, or setting webhook: {}", e.getMessage(), e);
+                        log.error("Error fetching users, files, or setting webhook: {}", e.getMessage(), e);
                         return null;
-                    })
-                    .join();
-        } catch (Exception e){
-            log.error("Error fetching files, users, or setting webhook: {}", e.getMessage(),e);
+                    });
+
+            // 모든 비동기 작업 완료 대기
+            usersFuture.join();
+        } catch (Exception e) {
+            log.error("Error in fetchAndSaveAll: {}", e.getMessage(), e);
         }
     }
+
 }
