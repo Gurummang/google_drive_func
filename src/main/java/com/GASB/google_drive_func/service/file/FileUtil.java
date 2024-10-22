@@ -292,7 +292,6 @@ public class FileUtil {
             log.error("Activities object is null");
             return null;
         }
-        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
         synchronized (this) {
             try {
                 String file_name = file.getName();
@@ -325,6 +324,7 @@ public class FileUtil {
                         log.info("FileUploadTable object saasFileId: {}", fileUploadTableObj.getSaasFileId());
                         log.info("FileUploadTable object timestamp: {}", fileUploadTableObj.getTimestamp());
                         fileUploadRepository.save(fileUploadTableObj);
+                        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
                         if (fileUploadTableObj.getId() == null){
                             log.error("FileUploadTable id is null");
                             return null;
