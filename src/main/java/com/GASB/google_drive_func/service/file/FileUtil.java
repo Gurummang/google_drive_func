@@ -292,6 +292,7 @@ public class FileUtil {
             log.error("Activities object is null");
             return null;
         }
+        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
         synchronized (this) {
             try {
                 String file_name = file.getName();
@@ -371,7 +372,7 @@ public class FileUtil {
             log.error("Mime type or file extension is null");
             return null;
         }
-        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
+//        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
         uploadFileToS3(filePath, s3UploadPath);
         return null;
     }
