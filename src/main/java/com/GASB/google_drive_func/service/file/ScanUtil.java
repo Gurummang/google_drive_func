@@ -3,6 +3,7 @@ package com.GASB.google_drive_func.service.file;
 import com.GASB.google_drive_func.model.entity.FileUploadTable;
 import com.GASB.google_drive_func.model.entity.TypeScan;
 import com.GASB.google_drive_func.model.repository.files.TypeScanRepo;
+import com.GASB.google_drive_func.service.event.MessageSender;
 import com.GASB.google_drive_func.service.file.enumset.HeaderSignature;
 import com.GASB.google_drive_func.service.file.enumset.MimeType;
 import jakarta.transaction.Transactional;
@@ -23,7 +24,8 @@ public class ScanUtil {
 
     private final Tika tika;
     private final TypeScanRepo typeScanRepo;
-    
+    private final MessageSender messageSender;
+
     @Async
     public void scanFile(String path, FileUploadTable fileUploadTableObject, String MIMEType, String Extension) {
         try {
@@ -44,13 +46,13 @@ public class ScanUtil {
             String fileSignature = null;
             boolean isMatched;
 
-            if (fileExtension.equals("txt")) {
+            if ("txt".equals(fileExtension)) {
                 // txt 파일의 경우 시그니처가 없으므로 MIME 타입만으로 검증
                 isMatched = mimeType.equals(expectedMimeType);
                 addData(fileUploadTableObject, isMatched, mimeType, "unknown", fileExtension);
             } else {
                 fileSignature = getFileSignature(inputFile, fileExtension);
-                if (fileSignature == "unknown"){
+                if ("unknown".equals(fileSignature)){
                     // 확장자와 MIME타입만 검사함
                     isMatched = checkWithoutSignature(mimeType, expectedMimeType, fileExtension);
                     addData(fileUploadTableObject, isMatched, mimeType, "unknown", fileExtension);
@@ -64,9 +66,28 @@ public class ScanUtil {
                     isMatched = checkAllType(mimeType, fileExtension, fileSignature, expectedMimeType);
                     addData(fileUploadTableObject, isMatched, mimeType, fileSignature, fileExtension);
                 }
+
+                if (!typeScanRepo.existsByUploadId(fileUploadTableObject)) {
+                    // 실패 시 재시도 횟수 제한 로직 추가
+                    int retryCount = 0;
+                    while (!typeScanRepo.existsByUploadId(fileUploadTableObject) && retryCount < 3) {
+                        log.error("type result save failed, retrying...");
+                        retryCount++;
+                        scanFile(path, fileUploadTableObject, MIMEType, Extension);  // 재시도
+                    }
+                    if (retryCount == 3) {
+                        log.error("Failed to save after 3 attempts");
+                        return;
+                    }
+                } else {
+                    // 다 완료되면 메세지 전송
+                    messageSender.sendMessage(fileUploadTableObject.getId());
+                }
             }
         } catch (IOException e) {
             log.error("Error scanning file", e);
+        } catch (Exception e) {
+            log.error("Unexpected error occurred", e);  // 다른 예외 처리
         }
     }
 
