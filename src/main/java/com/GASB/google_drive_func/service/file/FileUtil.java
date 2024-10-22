@@ -329,7 +329,7 @@ public class FileUtil {
                             log.error("FileUploadTable id is null");
                             return null;
                         }
-                        messageSender.sendMessage(fileUploadTableObj.getId());
+//                        messageSender.sendMessage(fileUploadTableObj.getId());
                     } catch (Exception e) {
                         log.error("Error saving file_upload table: {}", e.getMessage(), e);
                     }
