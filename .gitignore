@@ -39,3 +39,5 @@ out/
 tokens/
 downloads/
 src/main/resources/application.properties
+credentials.json
+**/testController.java
