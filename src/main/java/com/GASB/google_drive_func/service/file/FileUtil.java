@@ -325,11 +325,12 @@ public class FileUtil {
                         log.info("FileUploadTable object saasFileId: {}", fileUploadTableObj.getSaasFileId());
                         log.info("FileUploadTable object timestamp: {}", fileUploadTableObj.getTimestamp());
                         fileUploadRepository.save(fileUploadTableObj);
+                        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
                         if (fileUploadTableObj.getId() == null){
                             log.error("FileUploadTable id is null");
                             return null;
                         }
-                        messageSender.sendMessage(fileUploadTableObj.getId());
+//                        messageSender.sendMessage(fileUploadTableObj.getId());
                     } catch (Exception e) {
                         log.error("Error saving file_upload table: {}", e.getMessage(), e);
                     }
@@ -372,7 +373,7 @@ public class FileUtil {
             log.error("Mime type or file extension is null");
             return null;
         }
-        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
+//        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
         uploadFileToS3(filePath, s3UploadPath);
         return null;
     }
