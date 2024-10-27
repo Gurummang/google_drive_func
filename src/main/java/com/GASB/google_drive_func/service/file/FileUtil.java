@@ -240,6 +240,10 @@ public class FileUtil {
                 Files.createDirectories(parentDir);
             }
 
+            // 절대 경로로 변환하여 출력
+            Path absolutePath = Paths.get(filePath).toAbsolutePath();
+            log.info("Saving file to absolute path: {}", absolutePath);
+
             // 바이트 배열로 데이터를 다운로드 및 저장
             try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
                  FileOutputStream fileOutputStream = new FileOutputStream(filePath)) {
@@ -253,7 +257,7 @@ public class FileUtil {
                 // 다운로드된 파일 크기 검증
                 if (file.getSize() != null && downloadedSize == file.getSize()) {
                     log.info("Download verified: File size matches ({} bytes)", downloadedSize);
-                    log.info("Download Successful, FileName: {}, File SavePath: {}", file.getName(), filePath);
+                    log.info("Download Successful, FileName: {}, File SavePath: {}", file.getName(), absolutePath);
                 } else {
                     log.warn("Download size mismatch: Expected {} bytes, got {} bytes", file.getSize(), downloadedSize);
                 }
