@@ -346,7 +346,7 @@ public class FileUtil {
                         log.info("FileUploadTable Obj ID : {} " , fileUploadTableObj.getId());
                         fileUploadRepository.save(fileUploadTableObj);
                         log.info("scan start : {} in {}", file.getName(), filePath);
-                        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType());
+                        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), s3UploadPath);
                         if (fileUploadTableObj.getId() == null){
                             log.error("FileUploadTable id is null");
                             return null;
@@ -389,54 +389,16 @@ public class FileUtil {
             } catch (Exception e) {
                 log.error("Error while converting and saving entities: {}", e.getMessage(), e);
             }
-
-            try {
-                if (file.getMimeType() == null || file.getFileExtension() == null){
-                    log.error("Mime type or file extension is null");
-                    return null;
-                }
-                uploadFileToS3(filePath, s3UploadPath);
-            } catch (Exception e) {
-                log.error("Error while uploading file: {}", e.getMessage(), e);
-            }
         }
-
+        if (file.getMimeType() == null || file.getFileExtension() == null){
+            log.error("Mime type or file extension is null");
+            return null;
+        }
+//        uploadFileToS3(filePath, s3UploadPath);
         return null;
     }
 
-    private void uploadFileToS3(String filePath, String s3Key) {
 
-        //암호화 진행
-        try {
-            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(s3Key)
-                    .build();
-            // 암호화한 파일을 업로드
-            s3Client.putObject(putObjectRequest, fileEncUtil.encryptAndSaveFile(filePath));
-            log.info("File uploaded successfully to S3: {}", s3Key);
-        } catch (RuntimeException e) {
-            log.error("Error uploading file to S3: {}", e.getMessage(), e);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            deleteFileInLocal(filePath);
-        }
-    }
-    public void deleteFileInLocal(String filePath) {
-        try {
-            // 파일 경로를 Path 객체로 변환
-            Path path = Paths.get(filePath);
-
-            // 파일 삭제
-            Files.delete(path);
-            log.info("File deleted successfully from local filesystem: {}", filePath);
-
-        } catch (IOException e) {
-            // 파일 삭제 중 예외 처리
-            log.info("Error deleting file from local filesystem: {}" , e.getMessage());
-        }
-    }
     public DriveFileCountDto FileCountSum(int orgId, int saasId) {
         return DriveFileCountDto.builder()
                 .totalFiles(storedFilesRepository.countTotalFiles(orgId, saasId))
