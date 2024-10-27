@@ -26,14 +26,15 @@ public class ScanUtil {
     private final TypeScanRepo typeScanRepo;
     private final MessageSender messageSender;
 
-    @Async
-    public void scanFile(String path, FileUploadTable fileUploadTableObject, String MIMEType, String Extension) {
+    @Async("threadPoolTaskExecutor")
+    public void scanFile(String path, FileUploadTable fileUploadTableObject, String MIMEType, String extension) {
         try {
             // 중복 튜플 방지
             if (typeScanRepo.existsByUploadId(fileUploadTableObject)) {
                 log.error("Duplicated tuple: {}", fileUploadTableObject.getId());
                 return;
             }
+
             File inputFile = new File(path);
             if (!inputFile.exists() || !inputFile.isFile()) {
                 log.error("Invalid file path: {}", path);
@@ -41,53 +42,44 @@ public class ScanUtil {
             }
 
             String fileExtension = getFileExtension(inputFile);
-            String mimeType = MIMEType != null && !MIMEType.isEmpty() ? MIMEType : tika.detect(inputFile);
+            String mimeType = (MIMEType != null && !MIMEType.isEmpty()) ? MIMEType : tika.detect(inputFile);
             String expectedMimeType = MimeType.getMimeTypeByExtension(fileExtension);
-            String fileSignature = null;
+            String fileSignature = "unknown";
+
             boolean isMatched;
 
             if ("txt".equals(fileExtension)) {
-                // txt 파일의 경우 시그니처가 없으므로 MIME 타입만으로 검증
                 isMatched = mimeType.equals(expectedMimeType);
-                addData(fileUploadTableObject, isMatched, mimeType, "unknown", fileExtension);
+                addData(fileUploadTableObject, isMatched, mimeType, fileSignature, fileExtension);
             } else {
                 fileSignature = getFileSignature(inputFile, fileExtension);
-                if ("unknown".equals(fileSignature)){
-                    // 확장자와 MIME타입만 검사함
+                if (fileSignature == null) {
                     isMatched = checkWithoutSignature(mimeType, expectedMimeType, fileExtension);
-                    addData(fileUploadTableObject, isMatched, mimeType, "unknown", fileExtension);
-                }
-                if (fileSignature == null || fileSignature.isEmpty()) {
-                    // 확장자와 MIME 타입만 존재하는 경우
-                    isMatched = checkWithoutSignature(mimeType, expectedMimeType, fileExtension);
-                    addData(fileUploadTableObject, isMatched, mimeType, "unknown", fileExtension);
                 } else {
-                    // MIME 타입, 확장자, 시그니처가 모두 존재하는 경우
                     isMatched = checkAllType(mimeType, fileExtension, fileSignature, expectedMimeType);
-                    addData(fileUploadTableObject, isMatched, mimeType, fileSignature, fileExtension);
                 }
-
-                if (!typeScanRepo.existsByUploadId(fileUploadTableObject)) {
-                    // 실패 시 재시도 횟수 제한 로직 추가
-                    int retryCount = 0;
-                    while (!typeScanRepo.existsByUploadId(fileUploadTableObject) && retryCount < 3) {
-                        log.error("type result save failed, retrying...");
-                        retryCount++;
-                        scanFile(path, fileUploadTableObject, MIMEType, Extension);  // 재시도
-                    }
-                    if (retryCount == 3) {
-                        log.error("Failed to save after 3 attempts");
-                        return;
-                    }
-                } else {
-                    // 다 완료되면 메세지 전송
-                    messageSender.sendMessage(fileUploadTableObject.getId());
-                }
+                addData(fileUploadTableObject, isMatched, mimeType, fileSignature, fileExtension);
             }
+
+            int retryCount = 0;
+            while (!typeScanRepo.existsByUploadId(fileUploadTableObject) && retryCount < 3) {
+                log.warn("Type result save failed, retrying... (Attempt {})", retryCount + 1);
+                retryCount++;
+                addData(fileUploadTableObject, isMatched, mimeType, fileSignature, fileExtension);  // 재시도
+            }
+
+            if (retryCount >= 3) {
+                log.error("Failed to save after 3 attempts for file: {}", path);
+                return;
+            }
+
+            messageSender.sendMessage(fileUploadTableObject.getId());
+            deleteFileInLocal(path);
+
         } catch (IOException e) {
-            log.error("Error scanning file", e);
+            log.error("Error scanning file: {}", path, e);
         } catch (Exception e) {
-            log.error("Unexpected error occurred", e);  // 다른 예외 처리
+            log.error("Unexpected error occurred while scanning file: {}", path, e);
         }
     }
 
@@ -120,7 +112,7 @@ public class ScanUtil {
     private String getFileSignature(File file, String extension) throws IOException {
         if (extension == null || extension.isEmpty()) {
             log.error("Invalid file extension: {}", extension);
-            return null; // 기본값으로 "unknown"을 반환
+            return "unknown";  // 기본값으로 "unknown" 반환
         }
 
         int signatureLength = HeaderSignature.getSignatureLengthByExtension(extension);
@@ -131,10 +123,11 @@ public class ScanUtil {
 
         byte[] bytes = new byte[signatureLength];
 
+        // try-with-resources로 FileInputStream 자동 닫기
         try (FileInputStream fis = new FileInputStream(file)) {
             int bytesRead = fis.read(bytes);
             if (bytesRead < signatureLength) {
-                log.error("Could not read the complete file signature");
+                log.error("Could not read the complete file signature for file: {}", file.getName());
                 return "unknown";
             }
         }
@@ -144,12 +137,12 @@ public class ScanUtil {
             sb.append(String.format("%02X", b));
         }
 
-        String signatureHex = sb.toString();
-        String detectedExtension = HeaderSignature.getExtensionBySignature(signatureHex, extension);
-        log.info("Detected extension for signature {}: {}", signatureHex, detectedExtension);
+        String detectedExtension = HeaderSignature.getExtensionBySignature(sb.toString(), extension);
+        log.info("Detected extension for signature {}: {}", sb.toString(), detectedExtension);
 
         return detectedExtension;
     }
+
 
     private boolean checkAllType(String mimeType, String extension, String signature, String expectedMimeType) {
         log.info("Checking all types: mimeType={}, extension={}, signature={}, expectedMimeType={}", mimeType, extension, signature, expectedMimeType);
@@ -163,4 +156,16 @@ public class ScanUtil {
                 MimeType.mimeMatch(mimeType, extension);
     }
 
+    private void deleteFileInLocal(String filePath) {
+        if (filePath == null || filePath.isEmpty()) {
+            log.error("Invalid file path provided for deletion.");
+            return;
+        }
+        File file = new File(filePath);
+        if (file.exists() && file.delete()) {
+            log.info("File deleted successfully: {}", filePath);
+        } else {
+            log.warn("Failed to delete or file does not exist: {}", filePath);
+        }
+    }
 }
