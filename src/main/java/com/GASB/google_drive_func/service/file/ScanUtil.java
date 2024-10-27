@@ -3,6 +3,7 @@ package com.GASB.google_drive_func.service.file;
 import com.GASB.google_drive_func.model.entity.FileUploadTable;
 import com.GASB.google_drive_func.model.entity.TypeScan;
 import com.GASB.google_drive_func.model.repository.files.TypeScanRepo;
+import com.GASB.google_drive_func.service.FileEncUtil;
 import com.GASB.google_drive_func.service.event.MessageSender;
 import com.GASB.google_drive_func.service.file.enumset.HeaderSignature;
 import com.GASB.google_drive_func.service.file.enumset.MimeType;
@@ -10,8 +11,11 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,9 +32,15 @@ public class ScanUtil {
     private final Tika tika;
     private final TypeScanRepo typeScanRepo;
     private final MessageSender messageSender;
+    private final S3Client s3Client;
+    private final FileEncUtil fileEncUtil;
+
+    @Value("${aws.s3.bucket}")
+    private String bucketName;
+
 
     @Async("threadPoolTaskExecutor")
-    public void scanFile(String path, FileUploadTable fileUploadTableObject, String MIMEType) {
+    public void scanFile(String path, FileUploadTable fileUploadTableObject, String MIMEType, String s3FilePath) {
         try {
             // 중복 튜플 방지
             if (typeScanRepo.existsByUploadId(fileUploadTableObject.getId())) {
@@ -72,13 +82,50 @@ public class ScanUtil {
 
             // 데이터 저장 후 메시지 전송
             messageSender.sendMessage(fileUploadTableObject.getId());
-
+            
+            // 이후 s3 업로드 이후 파일 삭제
+            uploadFileToS3(path,s3FilePath);
         } catch (IOException e) {
             log.error("Error scanning file: {}", path, e);
         } catch (Exception e) {
             log.error("Unexpected error occurred while scanning file: {}", path, e);
         }
     }
+
+    private void uploadFileToS3(String filePath, String s3Key) {
+
+        //암호화 진행
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .build();
+            // 암호화한 파일을 업로드
+            s3Client.putObject(putObjectRequest, fileEncUtil.encryptAndSaveFile(filePath));
+            log.info("File uploaded successfully to S3: {}", s3Key);
+        } catch (RuntimeException e) {
+            log.error("Error uploading file to S3: {}", e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            deleteFileInLocal(filePath);
+        }
+    }
+    public void deleteFileInLocal(String filePath) {
+        try {
+            // 파일 경로를 Path 객체로 변환
+            Path path = Paths.get(filePath);
+
+            // 파일 삭제
+            Files.delete(path);
+            log.info("File deleted successfully from local filesystem: {}", filePath);
+
+        } catch (IOException e) {
+            // 파일 삭제 중 예외 처리
+            log.info("Error deleting file from local filesystem: {}" , e.getMessage());
+        }
+    }
+
 
     @Transactional
     protected void addData(FileUploadTable fileUploadTableObject, boolean correct, String mimeType, String signature, String extension) {
@@ -149,18 +196,5 @@ public class ScanUtil {
     private boolean checkWithoutSignature(String mimeType, String expectedMimeType, String extension) {
         return mimeType.equals(expectedMimeType) &&
                 MimeType.mimeMatch(mimeType, extension);
-    }
-
-    private void deleteFileInLocal(String filePath) {
-        if (filePath == null || filePath.isEmpty()) {
-            log.error("Invalid file path provided for deletion.");
-            return;
-        }
-        File file = new File(filePath);
-        if (file.exists() && file.delete()) {
-            log.info("File deleted successfully: {}", filePath);
-        } else {
-            log.warn("Failed to delete or file does not exist: {}", filePath);
-        }
     }
 }
