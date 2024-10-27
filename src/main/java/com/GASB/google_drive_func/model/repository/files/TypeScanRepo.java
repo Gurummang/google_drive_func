@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 public interface TypeScanRepo extends JpaRepository<TypeScan, Long> {
 
 
-    @Query("SELECT COUNT(t) > 0 FROM TypeScan t WHERE t.file_upload.id = :file_upload_id")
+    @Query("SELECT COUNT(t) > 0 FROM TypeScan t WHERE t.file_upload.id = :fileUpload")
     boolean existsByUploadId(@Param("fileUpload")Long file_upload_id);
 
 }
