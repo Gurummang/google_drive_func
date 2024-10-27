@@ -341,10 +341,12 @@ public class FileUtil {
 
                 if (!fileUploadRepository.existsBySaasFileIdAndTimestamp(fileUploadTableObj.getSaasFileId(), fileUploadTableObj.getTimestamp())) {
                     try {
-                        log.info("FileUploadTable object saasFileId: {}", fileUploadTableObj.getSaasFileId());
-                        log.info("FileUploadTable object timestamp: {}", fileUploadTableObj.getTimestamp());
+//                        log.info("FileUploadTable object saasFileId: {}", fileUploadTableObj.getSaasFileId());
+//                        log.info("FileUploadTable object timestamp: {}", fileUploadTableObj.getTimestamp());
+                        log.info("FileUploadTable Obj ID : {} " , fileUploadTableObj.getId());
                         fileUploadRepository.save(fileUploadTableObj);
-                        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
+                        log.info("scan start : {} in {}", file.getName(), filePath);
+                        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType());
                         if (fileUploadTableObj.getId() == null){
                             log.error("FileUploadTable id is null");
                             return null;
