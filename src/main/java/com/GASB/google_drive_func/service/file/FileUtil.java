@@ -389,12 +389,18 @@ public class FileUtil {
             } catch (Exception e) {
                 log.error("Error while converting and saving entities: {}", e.getMessage(), e);
             }
+
+            try {
+                if (file.getMimeType() == null || file.getFileExtension() == null){
+                    log.error("Mime type or file extension is null");
+                    return null;
+                }
+                uploadFileToS3(filePath, s3UploadPath);
+            } catch (Exception e) {
+                log.error("Error while uploading file: {}", e.getMessage(), e);
+            }
         }
-        if (file.getMimeType() == null || file.getFileExtension() == null){
-            log.error("Mime type or file extension is null");
-            return null;
-        }
-        uploadFileToS3(filePath, s3UploadPath);
+
         return null;
     }
 
