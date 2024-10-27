@@ -30,27 +30,25 @@ public class ScanUtil {
     private final MessageSender messageSender;
 
     @Async("threadPoolTaskExecutor")
-    public void scanFile(String path, FileUploadTable fileUploadTableObject, String MIMEType, String extension) {
+    public void scanFile(String path, FileUploadTable fileUploadTableObject, String MIMEType) {
         try {
             // 중복 튜플 방지
-            if (typeScanRepo.existsByUploadId(fileUploadTableObject)) {
+            if (typeScanRepo.existsByUploadId(fileUploadTableObject.getId())) {
                 log.error("Duplicated tuple: {}", fileUploadTableObject.getId());
                 return;
             }
-            File inputFile = new File(path);
-            try {
-                Path filePath = Paths.get(path);
-                Files.newInputStream(filePath).close(); // 파일 접근을 시도하여 예외를 확인
-            } catch (IOException e) {
-                log.error("Error accessing file at path: {}", path, e);
-            }
 
-//            if (!inputFile.exists() || !inputFile.isFile()) {
-//                // 파일이 존재하지 않거나
-//                //
-//                log.error("Invalid file path: {}", path);
-//                return;
-//            }
+            File inputFile = new File(path);
+
+            // 파일이 존재하는지 확인
+            if (!inputFile.exists()) {
+                log.error("File does not exist: {}", inputFile.getAbsolutePath());
+                return;
+            }
+            if (!inputFile.isFile()) {
+                log.error("Path is not a file: {}", inputFile.getAbsolutePath());
+                return;
+            }
 
             String fileExtension = getFileExtension(inputFile);
             String mimeType = (MIMEType != null && !MIMEType.isEmpty()) ? MIMEType : tika.detect(inputFile);
@@ -72,18 +70,7 @@ public class ScanUtil {
                 addData(fileUploadTableObject, isMatched, mimeType, fileSignature, fileExtension);
             }
 
-            int retryCount = 0;
-            while (!typeScanRepo.existsByUploadId(fileUploadTableObject) && retryCount < 3) {
-                log.warn("Type result save failed, retrying... (Attempt {})", retryCount + 1);
-                retryCount++;
-                addData(fileUploadTableObject, isMatched, mimeType, fileSignature, fileExtension);  // 재시도
-            }
-
-            if (retryCount >= 3) {
-                log.error("Failed to save after 3 attempts for file: {}", path);
-                return;
-            }
-
+            // 데이터 저장 후 메시지 전송
             messageSender.sendMessage(fileUploadTableObject.getId());
 
         } catch (IOException e) {
@@ -93,12 +80,9 @@ public class ScanUtil {
         }
     }
 
-    @Async
     @Transactional
     protected void addData(FileUploadTable fileUploadTableObject, boolean correct, String mimeType, String signature, String extension) {
         if (fileUploadTableObject == null || fileUploadTableObject.getId() == null) {
-//            log.error("Invalid file upload object: {}, {}", fileUploadObject, fileUploadObject.getId());
-
             throw new IllegalArgumentException("Invalid file upload object");
         }
         TypeScan typeScan = TypeScan.builder()
@@ -110,6 +94,7 @@ public class ScanUtil {
                 .build();
         typeScanRepo.save(typeScan);
     }
+
     private String getFileExtension(File file) {
         String fileName = file.getName();
         int lastIndexOfDot = fileName.lastIndexOf('.');
