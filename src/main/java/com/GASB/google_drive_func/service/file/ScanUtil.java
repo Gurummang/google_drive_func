@@ -74,7 +74,6 @@ public class ScanUtil {
             }
 
             messageSender.sendMessage(fileUploadTableObject.getId());
-            deleteFileInLocal(path);
 
         } catch (IOException e) {
             log.error("Error scanning file: {}", path, e);
