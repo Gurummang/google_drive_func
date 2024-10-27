@@ -30,6 +30,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
+import javax.annotation.PostConstruct;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -64,6 +65,16 @@ public class FileUtil {
 
     private static final Path BASE_PATH = Paths.get("downloads");
 
+    @PostConstruct
+    public void init() {
+        try {
+            Files.createDirectories(BASE_PATH);
+            log.info("Base path directory created or already exists: {}", BASE_PATH.toAbsolutePath());
+        } catch (IOException e) {
+            log.error("Failed to create base path directory: {}", BASE_PATH.toAbsolutePath(), e);
+            throw new RuntimeException("Could not create base directory", e);
+        }
+    }
     @Value("${aws.s3.bucket}")
     private String bucketName;
 
@@ -214,6 +225,7 @@ public class FileUtil {
 
     public byte[] DownloadFileMethod(String fileId, String filePath, Drive service) {
         try {
+            // Google Drive 파일 메타데이터 가져오기
             com.google.api.services.drive.model.File file = service.files().get(fileId)
                     .setSupportsAllDrives(true)
                     .setFields("id, name, size, mimeType")
@@ -222,30 +234,36 @@ public class FileUtil {
             log.info("Downloading file: {} (ID: {})", file.getName(), file.getId());
             log.info("File size: {} bytes, MIME type: {}", file.getSize(), file.getMimeType());
 
+            // 파일 저장 디렉터리 생성
             Path parentDir = Paths.get(filePath).getParent();
             if (parentDir != null && !Files.exists(parentDir)) {
                 Files.createDirectories(parentDir);
             }
 
-            // 바이트 배열로 데이터를 읽어들입니다.
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            service.files().get(fileId).executeMediaAndDownloadTo(outputStream);
+            // 바이트 배열로 데이터를 다운로드 및 저장
+            try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                 FileOutputStream fileOutputStream = new FileOutputStream(filePath)) {
 
-            // 파일을 저장합니다.
-            try (FileOutputStream fileOutputStream = new FileOutputStream(filePath)) {
+                service.files().get(fileId).executeMediaAndDownloadTo(outputStream);
                 outputStream.writeTo(fileOutputStream);
+
+                byte[] fileData = outputStream.toByteArray();
+                long downloadedSize = fileData.length;
+
+                // 다운로드된 파일 크기 검증
+                if (file.getSize() != null && downloadedSize == file.getSize()) {
+                    log.info("Download verified: File size matches ({} bytes)", downloadedSize);
+                    log.info("Download Successful, FileName: {}, File SavePath: {}", file.getName(), filePath);
+                } else {
+                    log.warn("Download size mismatch: Expected {} bytes, got {} bytes", file.getSize(), downloadedSize);
+                }
+
+                return fileData;
+
+            } catch (IOException e) {
+                log.error("IO error while downloading file: {}", e.getMessage(), e);
+                throw new RuntimeException("File download failed", e);
             }
-
-            byte[] fileData = outputStream.toByteArray();
-            long downloadedSize = fileData.length;
-
-            if (downloadedSize == file.getSize()) {
-                log.info("Download verified: File size matches ({} bytes)", downloadedSize);
-            } else {
-                log.warn("Download size mismatch: Expected {} bytes, got {} bytes", file.getSize(), downloadedSize);
-            }
-
-            return fileData; // 바이트 배열 반환
 
         } catch (IOException e) {
             log.error("IO error while downloading file: {}", e.getMessage(), e);
@@ -255,6 +273,7 @@ public class FileUtil {
             throw new RuntimeException("Unexpected error", e);
         }
     }
+
 
     private Void handleFileProcessing(File file, OrgSaaS orgSaaSObject, byte[] fileData, int workspaceId, String event_type, Drive service) throws IOException, NoSuchAlgorithmException {
         String hash = calculateHash(fileData);
@@ -373,7 +392,6 @@ public class FileUtil {
             log.error("Mime type or file extension is null");
             return null;
         }
-//        scanUtil.scanFile(filePath, fileUploadTableObj, file.getMimeType(), file.getFileExtension());
         uploadFileToS3(filePath, s3UploadPath);
         return null;
     }
