@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Service
 @Slf4j
@@ -34,12 +37,20 @@ public class ScanUtil {
                 log.error("Duplicated tuple: {}", fileUploadTableObject.getId());
                 return;
             }
-
             File inputFile = new File(path);
-            if (!inputFile.exists() || !inputFile.isFile()) {
-                log.error("Invalid file path: {}", path);
-                return;
+            try {
+                Path filePath = Paths.get(path);
+                Files.newInputStream(filePath).close(); // 파일 접근을 시도하여 예외를 확인
+            } catch (IOException e) {
+                log.error("Error accessing file at path: {}", path, e);
             }
+
+//            if (!inputFile.exists() || !inputFile.isFile()) {
+//                // 파일이 존재하지 않거나
+//                //
+//                log.error("Invalid file path: {}", path);
+//                return;
+//            }
 
             String fileExtension = getFileExtension(inputFile);
             String mimeType = (MIMEType != null && !MIMEType.isEmpty()) ? MIMEType : tika.detect(inputFile);
@@ -74,7 +85,6 @@ public class ScanUtil {
             }
 
             messageSender.sendMessage(fileUploadTableObject.getId());
-            deleteFileInLocal(path);
 
         } catch (IOException e) {
             log.error("Error scanning file: {}", path, e);
